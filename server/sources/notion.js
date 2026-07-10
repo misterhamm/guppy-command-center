@@ -289,6 +289,69 @@ export async function getProjects() {
   return projects;
 }
 
+// ---------- company logos (stored in Notion as Companies page icons) ----------
+
+let _companiesDb = null;
+async function companiesDb() {
+  if (process.env.NOTION_COMPANIES_DB_ID) return process.env.NOTION_COMPANIES_DB_ID;
+  if (_companiesDb) return _companiesDb;
+  const res = await client().search({ query: 'Companies', filter: { property: 'object', value: 'database' } });
+  const hit = res.results.find(d => ((d.title || []).map(t => t.plain_text).join('')).toLowerCase() === 'companies');
+  if (!hit) throw new Error('Companies database not found — share it with the integration or set NOTION_COMPANIES_DB_ID');
+  _companiesDb = hit.id;
+  return _companiesDb;
+}
+
+const NOTION_API = 'https://api.notion.com/v1';
+const nHeaders = () => ({ Authorization: `Bearer ${process.env.NOTION_TOKEN}`, 'Notion-Version': '2022-06-28' });
+
+async function companyPageByName(name) {
+  const pages = await queryAll(await companiesDb());
+  return pages.find(pg => {
+    const t = Object.values(pg.properties).find(p => p.type === 'title');
+    return t && plain(t.title).toLowerCase() === String(name).toLowerCase();
+  }) || null;
+}
+
+// Upload a logo via the Notion File Upload API and set it as the company
+// page's icon — visible in Notion too, and it travels with the workspace.
+export async function uploadCompanyLogo(clientName, buffer, contentType, filename) {
+  const page = await companyPageByName(clientName);
+  if (!page) throw new Error(`Company "${clientName}" not found in the Companies database`);
+  const create = await fetch(`${NOTION_API}/file_uploads`, {
+    method: 'POST',
+    headers: { ...nHeaders(), 'content-type': 'application/json' },
+    body: JSON.stringify({ filename, content_type: contentType })
+  }).then(r => r.json());
+  if (!create.id) throw new Error('Notion file upload failed: ' + (create.message || 'no upload id'));
+  const form = new FormData();
+  form.append('file', new Blob([buffer], { type: contentType }), filename);
+  const send = await fetch(`${NOTION_API}/file_uploads/${create.id}/send`, { method: 'POST', headers: nHeaders(), body: form }).then(r => r.json());
+  if (send.status !== 'uploaded') throw new Error('Notion file upload failed: ' + (send.message || send.status));
+  const attach = await fetch(`${NOTION_API}/pages/${page.id}`, {
+    method: 'PATCH',
+    headers: { ...nHeaders(), 'content-type': 'application/json' },
+    body: JSON.stringify({ icon: { type: 'file_upload', file_upload: { id: create.id } } })
+  }).then(r => r.json());
+  if (attach.object === 'error') throw new Error('Setting page icon failed: ' + attach.message);
+  return { pageId: page.id };
+}
+
+// Company page icons → { client, kind: 'file'|'external', url, version }.
+// File URLs are signed and expire (~1h); the server caches the bytes locally.
+export async function getCompanyLogos() {
+  const pages = await queryAll(await companiesDb());
+  const out = [];
+  for (const pg of pages) {
+    const t = Object.values(pg.properties).find(p => p.type === 'title');
+    const name = t ? plain(t.title) : '';
+    if (!name || !pg.icon) continue;
+    if (pg.icon.type === 'external') out.push({ client: name, kind: 'external', url: pg.icon.external.url, version: pg.last_edited_time });
+    else if (pg.icon.type === 'file') out.push({ client: name, kind: 'file', url: pg.icon.file.url, version: pg.last_edited_time });
+  }
+  return out;
+}
+
 // Dashboard project edits: status, Next Concern (newline-separated), Current
 // Status. Everything else stays Notion-side.
 export async function updateProject(id, patch) {

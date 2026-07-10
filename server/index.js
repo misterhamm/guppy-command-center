@@ -109,25 +109,71 @@ app.get('/api/calendar', async (_req, res) => {
 });
 
 // ---- company logos ----
-// Stored server-side (server/uploads, gitignored), keyed by client name via a
-// manifest. Uploaded from the project editor as base64 data URLs. When this
-// moves to the Hermes server, migrate the uploads folder with it.
+// Source of truth is Notion: logos live as page icons on the Companies
+// database (set via the File Upload API). Notion serves file icons through
+// expiring signed URLs, so the server keeps a local byte cache
+// (server/uploads, gitignored) keyed by client + icon version and re-downloads
+// when the icon changes. Without Notion configured, uploads just live in the
+// local cache (mock mode).
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 const uploadsDir = path.join(path.dirname(fileURLToPath(import.meta.url)), 'uploads');
 const manifestPath = path.join(uploadsDir, 'manifest.json');
 function readManifest() {
   try { return JSON.parse(fs.readFileSync(manifestPath, 'utf8')); } catch (e) { return {}; }
 }
+function writeManifest(m) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+  fs.writeFileSync(manifestPath, JSON.stringify(m, null, 2));
+}
 
-app.get('/api/logos', (_req, res) => {
+const LOGO_TYPES = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/svg+xml': 'svg', 'image/webp': 'webp', 'image/gif': 'gif' };
+const extFor = ct => LOGO_TYPES[(ct || '').split(';')[0]] || 'png';
+const slugFor = name => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'client';
+
+function cacheLogo(clientName, version, buf, contentType) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+  const hash = crypto.createHash('md5').update(String(version)).digest('hex').slice(0, 8);
+  const file = `${slugFor(clientName)}-${hash}.${extFor(contentType)}`;
+  fs.writeFileSync(path.join(uploadsDir, file), buf);
+  const manifest = readManifest();
+  const prev = manifest[clientName];
+  if (prev && prev.file !== file) { try { fs.unlinkSync(path.join(uploadsDir, prev.file)); } catch (e) { /* gone */ } }
+  manifest[clientName] = { file, version: String(version) };
+  writeManifest(manifest);
+  return `/api/logos/file/${encodeURIComponent(file)}`;
+}
+
+app.get('/api/logos', async (_req, res) => {
   const manifest = readManifest();
   const map = {};
-  for (const [clientName, file] of Object.entries(manifest)) {
-    let v = 0;
-    try { v = Math.round(fs.statSync(path.join(uploadsDir, file)).mtimeMs); } catch (e) { continue; }
-    map[clientName] = `/api/logos/file/${encodeURIComponent(file)}?v=${v}`;
+  if (notion.configured()) {
+    try {
+      const icons = await cached('logos', () => notion.getCompanyLogos());
+      for (const icon of icons) {
+        if (icon.kind === 'external') { map[icon.client] = icon.url; continue; }
+        const hit = manifest[icon.client];
+        if (hit && hit.version === String(icon.version) && fs.existsSync(path.join(uploadsDir, hit.file))) {
+          map[icon.client] = `/api/logos/file/${encodeURIComponent(hit.file)}`;
+          continue;
+        }
+        try {
+          const dl = await fetch(icon.url);
+          if (!dl.ok) continue;
+          const buf = Buffer.from(await dl.arrayBuffer());
+          map[icon.client] = cacheLogo(icon.client, icon.version, buf, dl.headers.get('content-type'));
+        } catch (e) { console.error('[logos] cache download failed for', icon.client, e.message); }
+      }
+      return res.json({ logos: map, source: 'notion' });
+    } catch (e) {
+      console.error('[notion] getCompanyLogos failed:', e.message);
+      // fall through to whatever is cached locally
+    }
   }
-  res.json({ logos: map });
+  for (const [clientName, entry] of Object.entries(manifest)) {
+    if (fs.existsSync(path.join(uploadsDir, entry.file))) map[clientName] = `/api/logos/file/${encodeURIComponent(entry.file)}`;
+  }
+  res.json({ logos: map, source: 'cache' });
 });
 
 app.get('/api/logos/file/:name', (req, res) => {
@@ -137,26 +183,25 @@ app.get('/api/logos/file/:name', (req, res) => {
   res.sendFile(file);
 });
 
-const LOGO_TYPES = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/svg+xml': 'svg', 'image/webp': 'webp', 'image/gif': 'gif' };
-app.post('/api/logos', (req, res) => {
+app.post('/api/logos', async (req, res) => {
   const { client: clientName, dataUrl } = req.body || {};
   if (!clientName || !dataUrl) return res.status(400).json({ error: 'client and dataUrl required' });
   const match = /^data:([^;]+);base64,(.+)$/.exec(dataUrl);
   if (!match || !LOGO_TYPES[match[1]]) return res.status(400).json({ error: 'unsupported image type' });
   const buf = Buffer.from(match[2], 'base64');
   if (buf.length > 4 * 1024 * 1024) return res.status(400).json({ error: 'image too large (4MB max)' });
-  fs.mkdirSync(uploadsDir, { recursive: true });
-  const slug = clientName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'client';
-  const file = `${slug}.${LOGO_TYPES[match[1]]}`;
-  const manifest = readManifest();
-  // drop a previous logo with a different extension
-  if (manifest[clientName] && manifest[clientName] !== file) {
-    try { fs.unlinkSync(path.join(uploadsDir, manifest[clientName])); } catch (e) { /* already gone */ }
+  if (notion.configured()) {
+    try {
+      await notion.uploadCompanyLogo(clientName, buf, match[1], `${slugFor(clientName)}-logo.${LOGO_TYPES[match[1]]}`);
+      cache.delete('logos');
+    } catch (e) {
+      console.error('[notion] uploadCompanyLogo failed:', e.message);
+      return res.status(502).json({ error: String(e.message || e) });
+    }
   }
-  fs.writeFileSync(path.join(uploadsDir, file), buf);
-  manifest[clientName] = file;
-  fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
-  res.json({ client: clientName, url: `/api/logos/file/${encodeURIComponent(file)}?v=${Date.now()}` });
+  // cache the bytes we already have so the UI updates instantly
+  const url = cacheLogo(clientName, Date.now(), buf, match[1]);
+  res.json({ client: clientName, url: `${url}?v=${Date.now()}` });
 });
 
 // Deterministic canned replies (mirrors the prototype) until the Hermes/Guppy

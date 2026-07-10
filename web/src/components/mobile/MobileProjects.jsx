@@ -1,15 +1,40 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useStore } from '../../state/store.jsx';
 import { useMob } from './MobileApp.jsx';
 import ReorderList from './ReorderList.jsx';
 import { projectView } from '../../lib/enrich.js';
+import { PROJECT_STATUSES } from '../../lib/logic.js';
 
 export default function MobileProjects() {
-  const { orderedProjects, tasks, P, todayISO } = useStore();
+  const { orderedProjects, projects, tasks, P, todayISO } = useStore();
   const { push, reorderMode, setReorderMode } = useMob();
+  const [filter, setFilter] = useState('all');
+
+  const chips = [
+    { key: 'all', label: 'All · ' + projects.length },
+    ...PROJECT_STATUSES
+      .map(s => ({ key: s, count: projects.filter(p => p.status === s).length }))
+      .filter(c => c.count > 0)
+      .map(c => ({ key: c.key, label: c.key + ' · ' + c.count }))
+  ];
+  const visible = filter === 'all' ? orderedProjects : orderedProjects.filter(p => p.status === filter);
 
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding: '2px 16px calc(96px + env(safe-area-inset-bottom, 0px))' }}>
+      <div className="mobile-scroll-x" style={{ display: 'flex', gap: 6, overflowX: 'auto', margin: '6px -16px 4px', padding: '0 16px' }}>
+        {chips.map(c => {
+          const active = filter === c.key;
+          const st = P.STATUS[c.key];
+          return (
+            <div
+              key={c.key}
+              onClick={() => setFilter(active && c.key !== 'all' ? 'all' : c.key)}
+              tabIndex={0}
+              style={{ flex: 'none', fontSize: 12.5, fontWeight: active ? 700 : 600, color: active ? 'var(--paper)' : st ? st.rail : P.soft, background: active ? 'var(--ink)' : 'var(--card)', border: '1px solid ' + (active ? 'var(--ink)' : 'var(--line)'), borderRadius: 99, padding: '8px 14px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+            >{c.label}</div>
+          );
+        })}
+      </div>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, margin: '6px 2px 2px' }}>
         <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>Reorder is saved to the dashboard — Notion untouched</span>
         <span onClick={() => setReorderMode(v => !v)} tabIndex={0} style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700, color: reorderMode ? P.green : 'var(--muted)', cursor: 'pointer' }}>{reorderMode ? 'Done' : 'Reorder'}</span>
@@ -19,7 +44,7 @@ export default function MobileProjects() {
         <div style={{ marginTop: 6 }}><ReorderList /></div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 6 }}>
-          {orderedProjects.map(p => {
+          {visible.map(p => {
             const v = projectView(p, tasks, P, todayISO);
             return (
               <div key={p.id} onClick={() => push({ type: 'project', id: p.id })} tabIndex={0} style={{ background: 'var(--card)', border: '1px solid var(--line)', borderLeft: '4px solid ' + v.rail, borderRadius: 12, padding: '12px 14px', cursor: 'pointer', opacity: v.opacity }}>

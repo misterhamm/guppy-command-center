@@ -24,6 +24,7 @@ export const THEMES = {
       'At Risk': { rail: '#C2452D', bg: '#C2452D', color: '#fff', word: 'AT RISK' },
       'Waiting': { rail: '#B98A2A', bg: '#F5E3BC', color: '#7a4d00', word: 'WAITING' },
       'Active': { rail: '#1E7A52', bg: 'rgba(30,122,82,.1)', color: '#1E7A52', word: 'ACTIVE' },
+      'Standby': { rail: '#6A5D93', bg: '#EEEAF5', color: '#6A5D93', word: 'STANDBY' },
       'On Hold': { rail: '#8a8375', bg: '#EDE9E1', color: '#4a443b', word: 'ON HOLD' }
     }
   },
@@ -48,6 +49,7 @@ export const THEMES = {
       'At Risk': { rail: '#E0654B', bg: '#E0654B', color: '#fff', word: 'AT RISK' },
       'Waiting': { rail: '#D0A544', bg: '#3B3115', color: '#E4BC64', word: 'WAITING' },
       'Active': { rail: '#3FB37D', bg: 'rgba(63,179,125,.2)', color: '#3FB37D', word: 'ACTIVE' },
+      'Standby': { rail: '#A99BC9', bg: '#2B2836', color: '#A99BC9', word: 'STANDBY' },
       'On Hold': { rail: '#968E7C', bg: '#403A2F', color: '#C4BCAC', word: 'ON HOLD' }
     }
   }

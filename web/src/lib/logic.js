@@ -7,13 +7,17 @@ export function isStale(p, todayISO) { return staleDays(p, todayISO) > p.cadence
 export function nextLate(p, todayISO) { return daysBetween(p.nextISO, todayISO) > 0; }
 export function nextDueNow(p, todayISO) { return p.nextISO === todayISO; }
 
-// Severity rank: At Risk → Waiting → stale/next-check-in-late → Active → On Hold
+// Severity rank: At Risk → Waiting → stale/next-check-in-late → Active → Standby → On Hold
 export function severityRank(p, todayISO) {
   return p.status === 'At Risk' ? 0
     : p.status === 'Waiting' ? 1
-    : p.status === 'On Hold' ? 4
+    : p.status === 'Standby' ? 4
+    : p.status === 'On Hold' ? 5
     : (isStale(p, todayISO) || nextLate(p, todayISO)) ? 2 : 3;
 }
+
+// Chip order for the Projects status filter row
+export const PROJECT_STATUSES = ['At Risk', 'Waiting', 'Active', 'Standby', 'On Hold'];
 
 export function defaultRadarOrder(projects, todayISO) {
   return projects.slice().sort((a, b) => severityRank(a, todayISO) - severityRank(b, todayISO)).map(p => p.id);

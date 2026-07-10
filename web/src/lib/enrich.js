@@ -38,7 +38,7 @@ export function projectView(p, tasks, P, todayISO) {
   chips.push(rel.length ? { text: rel.length + ' open', bg: P.panel, color: P.soft } : { text: 'No open tasks', bg: P.panel, color: P.soft });
   return {
     rail: st.rail, badgeBg: st.bg, badgeColor: st.color, statusWord: st.word,
-    opacity: p.status === 'On Hold' ? 0.8 : 1,
+    opacity: p.status === 'On Hold' || p.status === 'Standby' ? 0.8 : 1,
     concerns: (p.concerns || []).map(c => ({ ...c, dot: concernDot(c.tone, P) })),
     topConcern: p.concerns && p.concerns[0] ? p.concerns[0].text : '',
     chips

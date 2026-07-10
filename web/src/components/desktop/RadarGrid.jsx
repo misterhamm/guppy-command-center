@@ -4,16 +4,18 @@ import { useDesk } from './DesktopApp.jsx';
 import { projectView } from '../../lib/enrich.js';
 
 // Project Radar card grid — drag to reorder (dashboard-only order), click for
-// detail. Read-only otherwise.
-export default function RadarGrid() {
+// detail. Read-only otherwise. statusFilter narrows the visible cards without
+// touching the saved order.
+export default function RadarGrid({ statusFilter = 'all' }) {
   const { orderedProjects, tasks, P, todayISO, moveProjectTo, showToast } = useStore();
   const { setExpId, setMenu } = useDesk();
   const dragging = useRef(null);
   const [dragOverId, setDragOverId] = useState(null);
+  const visible = statusFilter === 'all' ? orderedProjects : orderedProjects.filter(p => p.status === statusFilter);
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
-      {orderedProjects.map(p => {
+      {visible.map(p => {
         const v = projectView(p, tasks, P, todayISO);
         return (
           <div

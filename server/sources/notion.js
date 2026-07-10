@@ -260,7 +260,7 @@ export async function getProjects() {
     if (Array.isArray(clientVal)) clientVal = clientVal.length ? await pageTitle(clientVal[0]) : '';
     const statusRaw = readProp(page, m.status) || 'Active';
     // Mirror Notion status values exactly; normalize case for the known set
-    const known = ['Active', 'Waiting', 'At Risk', 'On Hold', 'Complete'];
+    const known = ['Active', 'Waiting', 'At Risk', 'Standby', 'On Hold', 'Complete'];
     const status = known.find(k => k.toLowerCase() === statusRaw.toLowerCase()) || statusRaw;
     const cadence = readProp(page, m.cadence) || 'Weekly';
     const concernsText = readProp(page, m.concerns) || '';

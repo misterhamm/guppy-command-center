@@ -26,6 +26,17 @@ function applyThemeDom(theme) {
 
 const EMPTY_QA = { category: 'Work', name: '', client: '', project: '', dueISO: '', priority: 'Soon', notes: '', noteOpen: false, error: false };
 
+// Text size: uniform zoom keeps the design's proportions while scaling type.
+// Defaults to 110% (per Chris — progressive lenses).
+const TEXT_SCALES = [1, 1.1, 1.2];
+function initialTextScale() {
+  try {
+    const v = parseFloat(localStorage.getItem('cc-text-scale'));
+    if (TEXT_SCALES.includes(v)) return v;
+  } catch (e) { /* private mode */ }
+  return 1.1;
+}
+
 export function StoreProvider({ children }) {
   const [ready, setReady] = useState(false);
   const [theme, setThemeState] = useState(initialTheme);
@@ -56,6 +67,17 @@ export function StoreProvider({ children }) {
   const setTheme = useCallback(t => {
     setThemeState(t);
     try { localStorage.setItem('cc-theme', t); } catch (e) { /* ignore */ }
+  }, []);
+
+  // ---- text size ----
+  const [textScale, setTextScaleState] = useState(initialTextScale);
+  useEffect(() => { document.documentElement.style.zoom = textScale; }, [textScale]);
+  const cycleTextScale = useCallback(() => {
+    setTextScaleState(cur => {
+      const next = TEXT_SCALES[(TEXT_SCALES.indexOf(cur) + 1) % TEXT_SCALES.length];
+      try { localStorage.setItem('cc-text-scale', String(next)); } catch (e) { /* ignore */ }
+      return next;
+    });
   }, []);
 
   // ---- clock ----
@@ -314,6 +336,7 @@ export function StoreProvider({ children }) {
 
   const value = {
     ready, theme, setTheme, P,
+    textScale, cycleTextScale,
     view, setView,
     tasks, projects, orderedProjects, calendar, clients,
     todayISO, nowMin,

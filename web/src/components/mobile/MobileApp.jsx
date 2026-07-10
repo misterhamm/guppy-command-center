@@ -13,7 +13,7 @@ export const useMob = () => useContext(MobCtx);
 
 export default function MobileApp() {
   const store = useStore();
-  const { view, setView, tasks, projects, P, theme, setTheme, refresh, showToast, toast, dismissToast, outage, syncedAgo, todayISO } = store;
+  const { view, setView, tasks, projects, P, theme, setTheme, refresh, showToast, toast, dismissToast, outage, syncedAgo, todayISO, textScale, cycleTextScale } = store;
 
   const [stack, setStack] = useState([]);          // sheet stack
   const [dr, setDr] = useState(null);              // task editor working copy
@@ -75,6 +75,7 @@ export default function MobileApp() {
           </div>
           <div onClick={() => refresh().catch(() => showToast('Refresh failed'))} tabIndex={0} title="Refresh" style={{ width: 38, height: 38, borderRadius: 99, border: '1px solid var(--line2)', background: 'var(--card)', display: 'grid', placeItems: 'center', fontSize: 15, color: 'var(--soft)', cursor: 'pointer', flex: 'none' }}>↻</div>
           <div onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} tabIndex={0} title="Theme" style={{ width: 38, height: 38, borderRadius: 99, border: '1px solid var(--line2)', background: 'var(--card)', display: 'grid', placeItems: 'center', fontSize: 14, color: 'var(--soft)', cursor: 'pointer', flex: 'none' }}>{theme === 'dark' ? '☀' : '☾'}</div>
+          <div onClick={cycleTextScale} tabIndex={0} title={'Text size · ' + Math.round(textScale * 100) + '%'} style={{ width: 38, height: 38, borderRadius: 99, border: '1px solid var(--line2)', background: 'var(--card)', display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 800, color: 'var(--soft)', cursor: 'pointer', flex: 'none' }}>Aa</div>
           <div onClick={() => push({ type: 'guppy' })} tabIndex={0} style={{ width: 38, height: 38, borderRadius: 99, overflow: 'hidden', flex: 'none', border: '2px solid var(--green)', cursor: 'pointer' }}>
             <img src="/guppy.jpg" alt="Guppy" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: '50% 12%', display: 'block' }} />
           </div>

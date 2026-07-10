@@ -5,7 +5,7 @@ import { taskCounts } from '../../lib/selectors.js';
 import { todayEvents, nowBar } from '../../lib/calendar.js';
 
 export default function Sidebar({ anyFailed }) {
-  const { view, setView, tasks, projects, calendar, todayISO, nowMin, P, outage, syncedAgo, refresh, theme, setTheme, showToast } = useStore();
+  const { view, setView, tasks, projects, calendar, todayISO, nowMin, P, outage, syncedAgo, refresh, theme, setTheme, showToast, textScale, cycleTextScale } = useStore();
   const { setMenu, setSelId } = useDesk();
 
   const { open, attention } = taskCounts(tasks, todayISO);
@@ -73,6 +73,13 @@ export default function Sidebar({ anyFailed }) {
           className="hover-green"
           style={{ fontSize: 12, fontWeight: 600, color: 'var(--soft)', border: '1px solid var(--line2)', borderRadius: 7, padding: '6px 0', textAlign: 'center', background: 'var(--card)', cursor: 'pointer' }}
         >{theme === 'dark' ? '☀ Light mode' : '☾ Dark mode'}</div>
+        <div
+          onClick={cycleTextScale}
+          tabIndex={0}
+          className="hover-green"
+          title="Cycle text size"
+          style={{ fontSize: 12, fontWeight: 600, color: 'var(--soft)', border: '1px solid var(--line2)', borderRadius: 7, padding: '6px 0', textAlign: 'center', background: 'var(--card)', cursor: 'pointer' }}
+        >Aa Text size · {Math.round(textScale * 100)}%</div>
         <div style={{ fontSize: 10.5, color: 'var(--muted)', textAlign: 'center', paddingTop: 2 }}>Shortcuts: / add · ↑↓ · ⏎ open · D done · S snooze</div>
       </div>
     </div>

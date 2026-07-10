@@ -1,0 +1,30 @@
+/* Static surface tokens — must stay in sync with THEMES in src/lib/themes.js */
+:root{--canvas:#E9E5DC;--paper:#F7F5F1;--card:#fff;--card-alt:#FBF9F5;--panel:#F1EDE4;--ink:#201D1A;--soft:#4a443b;--muted:#6E6759;--faint:#8a8375;--line:rgba(32,29,26,.1);--line2:rgba(32,29,26,.15);--line-soft:rgba(32,29,26,.07);--green:#1E7A52;--green-hover:#14593B;--green-soft:rgba(30,122,82,.09);--red:#C2452D;--red-soft:rgba(194,69,45,.12);--amber:#B98A2A;--cream:#F5E3BC;--cream-bg:#FBF6E8;--cream-text:#7a4d00;--lav-bg:#EEEAF5;--lav-text:#6A5D93;--box-border:#b8b0a2;--toast-bg:#201D1A;--toast-text:#F7F5F1;--toast-accent:#7FD4A8;--shadow:rgba(32,29,26,.16);--shadow-deep:rgba(32,29,26,.25)}
+:root[data-theme="dark"]{--canvas:#0B0A08;--paper:#12100C;--card:#302B23;--card-alt:#26221B;--panel:#2A2620;--ink:#EDE7DA;--soft:#C4BCAC;--muted:#A69D8B;--faint:#968E7C;--line:rgba(237,231,218,.16);--line2:rgba(237,231,218,.26);--line-soft:rgba(237,231,218,.1);--green:#3FB37D;--green-hover:#57C592;--green-soft:rgba(63,179,125,.18);--red:#E0654B;--red-soft:rgba(224,101,75,.2);--amber:#D0A544;--cream:#3B3115;--cream-bg:#332C18;--cream-text:#E4BC64;--lav-bg:#2B2836;--lav-text:#A99BC9;--box-border:#847B67;--toast-bg:#EDE7DA;--toast-text:#12100C;--toast-accent:#1E7A52;--shadow:rgba(0,0,0,.3);--shadow-deep:rgba(0,0,0,.45)}
+
+html,body{margin:0;height:100%;background:var(--paper);font-family:'Figtree',system-ui,sans-serif}
+#root{height:100%}
+a{color:var(--green);text-decoration:none}
+a:hover{color:var(--green-hover)}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid var(--green);outline-offset:2px;border-radius:4px}
+input,select,textarea,button{font-family:'Figtree',system-ui,sans-serif}
+
+@keyframes toastIn{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes panelIn{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:translateX(0)}}
+@keyframes popIn{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:scale(1)}}
+@keyframes sheetUp{from{transform:translateY(40px);opacity:.5}to{transform:translateY(0);opacity:1}}
+
+/* Hover affordances the prototypes expressed via style-hover */
+.hover-row:hover{background:var(--card-alt)}
+.hover-green:hover{border-color:var(--green)!important;color:var(--green)!important}
+.hover-green-bg:hover{background:var(--green-hover)!important}
+.hover-panel:hover{background:var(--panel)}
+.hover-card-shadow:hover{box-shadow:0 3px 12px var(--shadow)}
+.hover-dim:hover{filter:brightness(.98)}
+.hover-green-soft:hover{background:var(--green-soft)}
+.hover-scale:hover{transform:scale(1.06)}
+.hover-text-green:hover{color:var(--green)!important}
+
+.mobile-scroll-x{scrollbar-width:none}
+.mobile-scroll-x::-webkit-scrollbar{display:none}

@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#F7F5F1">
+<style>
+:root{--canvas:#E9E5DC;--paper:#F7F5F1;--card:#fff;--card-alt:#FBF9F5;--panel:#F1EDE4;--ink:#201D1A;--soft:#4a443b;--muted:#6E6759;--faint:#8a8375;--line:rgba(32,29,26,.1);--line2:rgba(32,29,26,.15);--line-soft:rgba(32,29,26,.07);--green:#1E7A52;--green-hover:#14593B;--green-soft:rgba(30,122,82,.09);--red:#C2452D;--red-soft:rgba(194,69,45,.12);--amber:#B98A2A;--cream:#F5E3BC;--cream-bg:#FBF6E8;--cream-text:#7a4d00;--lav-bg:#EEEAF5;--lav-text:#6A5D93;--box-border:#b8b0a2;--toast-bg:#201D1A;--toast-text:#F7F5F1;--toast-accent:#7FD4A8;--shadow:rgba(32,29,26,.16);--shadow-deep:rgba(32,29,26,.3)}
+:root[data-theme="dark"]{--canvas:#0B0A08;--paper:#12100C;--card:#302B23;--card-alt:#26221B;--panel:#2A2620;--ink:#EDE7DA;--soft:#C4BCAC;--muted:#A69D8B;--faint:#968E7C;--line:rgba(237,231,218,.16);--line2:rgba(237,231,218,.26);--line-soft:rgba(237,231,218,.1);--green:#3FB37D;--green-hover:#57C592;--green-soft:rgba(63,179,125,.18);--red:#E0654B;--red-soft:rgba(224,101,75,.2);--amber:#D0A544;--cream:#3B3115;--cream-bg:#332C18;--cream-text:#E4BC64;--lav-bg:#2B2836;--lav-text:#A99BC9;--box-border:#847B67;--toast-bg:#EDE7DA;--toast-text:#12100C;--toast-accent:#1E7A52;--shadow:rgba(0,0,0,.3);--shadow-deep:rgba(0,0,0,.5)}
+html,body{margin:0;background:var(--canvas);font-family:'Figtree',system-ui,sans-serif}
+a{color:var(--green);text-decoration:none}a:hover{color:var(--green-hover)}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid var(--green);outline-offset:2px;border-radius:4px}
+@keyframes sheetUp{from{transform:translateY(40px);opacity:.5}to{transform:translateY(0);opacity:1}}
+@keyframes popIn{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:scale(1)}}
+@keyframes toastIn{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}
+input,select,textarea{font-family:'Figtree',system-ui,sans-serif}
+::-webkit-scrollbar{display:none}
+</style>
+</helmet>
+
+<section style="display:flex;gap:48px;padding:48px;align-items:flex-start;justify-content:center;flex-wrap:wrap">
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:14px;font-weight:700;color:var(--ink)">Mobile Command Center — consolidated · light + dark via in-app toggle</span>
+    </div>
+    <div style="width:390px;background:#1b1917;border-radius:48px;padding:9px;box-shadow:0 24px 60px rgba(0,0,0,.35)">
+      <div style="width:100%;height:826px;border-radius:40px;overflow:hidden;position:relative;background:var(--paper);color:var(--ink);display:flex;flex-direction:column">
+
+        <!-- status bar -->
+        <div style="height:42px;flex:none;display:flex;align-items:center;padding:0 26px;font-size:14px;font-weight:700">
+          <span>9:41</span>
+          <div style="margin-left:auto;display:flex;align-items:center;gap:5px">
+            <div style="display:flex;align-items:flex-end;gap:1.5px"><span style="width:3px;height:4px;background:var(--ink);border-radius:1px"></span><span style="width:3px;height:6px;background:var(--ink);border-radius:1px"></span><span style="width:3px;height:8px;background:var(--ink);border-radius:1px"></span><span style="width:3px;height:10px;background:var(--ink);border-radius:1px"></span></div>
+            <div style="width:22px;height:11px;border:1.5px solid var(--ink);border-radius:3.5px;padding:1.5px"><div style="width:70%;height:100%;background:var(--ink);border-radius:1.5px"></div></div>
+          </div>
+        </div>
+
+        <!-- top bar -->
+        <div style="flex:none;display:flex;align-items:center;gap:8px;padding:6px 18px 10px">
+          <div style="min-width:0;flex:1">
+            <div style="font-size:21px;font-weight:800;line-height:1.1">{{ screenTitle }}</div>
+            <div style="font-size:12px;color:var(--muted);font-weight:600;margin-top:1px">{{ screenSub }}</div>
+          </div>
+          <div onClick="{{ refresh }}" tabindex="0" title="Refresh" style="width:38px;height:38px;border-radius:99px;border:1px solid var(--line2);background:var(--card);display:grid;place-items:center;font-size:15px;color:var(--soft);cursor:pointer;flex:none">↻</div>
+          <div onClick="{{ toggleTheme }}" tabindex="0" title="Theme" style="width:38px;height:38px;border-radius:99px;border:1px solid var(--line2);background:var(--card);display:grid;place-items:center;font-size:14px;color:var(--soft);cursor:pointer;flex:none">{{ themeIcon }}</div>
+          <div onClick="{{ openGuppy }}" tabindex="0" style="width:38px;height:38px;border-radius:99px;overflow:hidden;flex:none;border:2px solid var(--green);cursor:pointer"><img src="guppy.jpg" alt="Guppy" style="width:100%;height:100%;object-fit:cover;object-position:50% 12%;display:block"></img></div>
+        </div>
+
+        <!-- Connection failure banner -->
+        <sc-if value="{{ outageVisible }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:none;display:flex;align-items:center;gap:8px;background:var(--red-soft);border-top:1px solid var(--red);border-bottom:1px solid var(--red);padding:7px 18px">
+            <span style="width:7px;height:7px;border-radius:99px;background:var(--red);flex:none"></span>
+            <div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700;color:var(--red)">{{ outageTitle }}</div><div style="font-size:11px;color:var(--soft)">{{ outageSub }}</div></div>
+            <span onClick="{{ outageRetry }}" tabindex="0" style="font-size:11.5px;font-weight:800;color:#fff;background:var(--red);padding:5px 11px;border-radius:6px;cursor:pointer;flex:none">Retry</span>
+          </div>
+        </sc-if>
+
+        <!-- ============ TODAY ============ -->
+        <sc-if value="{{ isToday }}" hint-placeholder-val="{{ true }}">
+        <div style="flex:1;overflow-y:auto;padding:2px 16px 96px" data-screen-label="Mobile Today">
+
+          <!-- F2: now line -->
+          <div style="display:flex;align-items:center;gap:7px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin:4px 0 10px">
+            <span style="width:7px;height:7px;border-radius:99px;background:var(--green);flex:none"></span>
+            <span style="font-size:12px;font-weight:700;color:var(--ink);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ nowTitle }}</span>
+            <span style="font-size:11.5px;color:var(--muted);flex:none;margin-left:auto">{{ nowSub }}</span>
+          </div>
+
+          <sc-for list="{{ todayGroups }}" as="g" hint-placeholder-count="3">
+            <div style="display:flex;align-items:baseline;gap:8px;margin:8px 0 6px"><span style="font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:{{ g.labelColor }}">{{ g.label }}</span><span style="font-size:11.5px;color:var(--muted)">{{ g.count }}</span></div>
+            <div style="background:var(--card);border:1px solid {{ g.border }};border-radius:12px;overflow:hidden;margin-bottom:12px">
+              <sc-for list="{{ g.tasks }}" as="t" hint-placeholder-count="2">
+                <div style="position:relative;overflow:hidden;border-bottom:1px solid var(--line-soft)">
+                <div style="position:absolute;inset:0;background:var(--green);color:#fff;display:flex;align-items:center;padding-left:18px;font-weight:800;font-size:13px;opacity:{{ t.doneRevealOpacity }}">✓ Done</div>
+                <div style="position:absolute;top:0;bottom:0;right:0;display:flex">
+                  <div onClick="{{ t.swipeSnooze }}" style="width:88px;background:var(--amber);color:#fff;display:grid;place-items:center;font-size:11.5px;font-weight:800;text-align:center;cursor:pointer;line-height:1.3">Snooze<br>Tmrw</div>
+                  <div onClick="{{ t.swipeMore }}" style="width:68px;background:var(--panel);color:var(--soft);display:grid;place-items:center;font-size:11.5px;font-weight:800;cursor:pointer">More</div>
+                </div>
+                <div onClick="{{ t.open }}" onPointerDown="{{ t.pressDown }}" onPointerMove="{{ t.pressMove }}" onPointerUp="{{ t.pressUp }}" onPointerCancel="{{ t.pressUp }}" tabindex="0" style="display:flex;align-items:center;gap:12px;padding:11px 14px;min-height:52px;opacity:{{ t.opacity }};cursor:pointer;background:var(--card);transform:translateX({{ t.swipeDx }});transition:{{ t.swipeTransition }};touch-action:pan-y;position:relative">
+                  <span onClick="{{ t.toggle }}" tabindex="0" role="checkbox" style="width:44px;height:44px;margin:-11px -11px -11px -14px;display:grid;place-items:center;cursor:pointer;flex:none"><span style="width:22px;height:22px;border:1.5px solid {{ t.boxBorder }};border-radius:7px;background:{{ t.boxBg }};color:#fff;display:grid;place-items:center;font-size:12px;font-weight:800">{{ t.check }}</span></span>
+                  <div style="flex:1;min-width:0">
+                    <div style="font-size:14px;font-weight:600;color:{{ t.nameColor }};text-decoration:{{ t.strike }};line-height:1.3">{{ t.name }}</div>
+                    <div style="display:flex;gap:6px;margin-top:3px;align-items:center;flex-wrap:wrap">
+                      <span style="font-size:11px;font-weight:600;color:{{ t.clientChipColor }};background:{{ t.clientChipBg }};padding:1px 7px;border-radius:99px">{{ t.clientChip }}</span>
+                      <sc-if value="{{ t.hasProject }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;font-weight:600;color:{{ t.projChipColor }};background:{{ t.projChipBg }};border:1px solid {{ t.projChipBorder }};padding:1px 7px;border-radius:99px">{{ t.project }}</span></sc-if>
+                      <span style="font-size:11.5px;font-weight:700;color:{{ t.dueColor }};font-variant-numeric:tabular-nums">{{ t.dueDisplay }}</span>
+                      <sc-if value="{{ t.justDone }}" hint-placeholder-val="{{ false }}"><span style="font-size:11.5px;color:var(--green);font-weight:600">Nice — done ✓</span></sc-if>
+                      <sc-if value="{{ t.failed }}" hint-placeholder-val="{{ false }}"><span onClick="{{ t.retry }}" style="font-size:10.5px;font-weight:800;color:#fff;background:var(--red);padding:1px 7px;border-radius:5px">Sync failed · Retry</span></sc-if>
+                    </div>
+                  </div>
+                  <span style="font-size:10px;font-weight:800;color:{{ t.prColor }};background:{{ t.prBg }};padding:2px 7px;border-radius:5px;flex:none">{{ t.priority }}</span>
+                </div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+          <div style="font-size:11px;color:var(--muted);margin:-4px 2px 12px">Tap to edit · hold a task for quick actions</div>
+
+          <!-- calendar strip -->
+          <div style="display:flex;align-items:baseline;gap:8px;margin:6px 0 6px"><span style="font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--ink)">Calendar</span><span style="font-size:11.5px;color:var(--muted)">{{ stripNextLabel }}</span><span onClick="{{ goCalendar }}" tabindex="0" style="margin-left:auto;font-size:12px;font-weight:700;color:var(--green);cursor:pointer">Week view →</span></div>
+          <div onPointerDown="{{ stripDown }}" onPointerMove="{{ stripMove }}" onPointerUp="{{ stripUp }}" onPointerCancel="{{ stripUp }}" style="display:flex;gap:8px;overflow-x:auto;margin:0 -16px;padding:2px 16px 6px;cursor:grab;touch-action:pan-x pan-y">
+            <sc-for list="{{ stripEvents }}" as="ev" hint-placeholder-count="4">
+              <div onClick="{{ ev.open }}" tabindex="0" style="flex:none;width:170px;border:{{ ev.stripBorder }};border-radius:10px;padding:9px 11px;background:{{ ev.bg }};opacity:{{ ev.opacity }};cursor:pointer">
+                <div style="font-size:11.5px;font-weight:700;color:{{ ev.timeColor }};font-variant-numeric:tabular-nums">{{ ev.time }}</div>
+                <div style="font-size:13px;font-weight:700;color:{{ ev.titleColor }};margin-top:1px;line-height:1.25">{{ ev.title }}</div>
+                <div style="display:flex;align-items:center;gap:6px;margin-top:2px"><span style="font-size:11px;color:var(--muted)">{{ ev.locLabel }}</span><sc-if value="{{ ev.hasJoin }}" hint-placeholder-val="{{ false }}"><a href="{{ ev.joinUrl }}" target="_blank" onClick="{{ swallow }}" style="font-size:10px;font-weight:800;color:var(--green);background:var(--green-soft);padding:1px 5px;border-radius:4px">{{ ev.join }} ↗</a></sc-if></div>
+              </div>
+            </sc-for>
+          </div>
+
+          <!-- radar: A2 full landscape -->
+          <div style="display:flex;align-items:baseline;gap:8px;margin:14px 0 8px"><span style="font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--ink)">Project Radar</span><span style="font-size:11.5px;color:var(--muted)">all {{ projectCount }}</span><span onClick="{{ reorderToggle }}" tabindex="0" style="margin-left:auto;font-size:12px;font-weight:700;color:{{ reorderColor }};cursor:pointer">{{ reorderLabel }}</span><span onClick="{{ goProjects }}" tabindex="0" style="font-size:12px;font-weight:700;color:var(--green);cursor:pointer">Details →</span></div>
+          <sc-if value="{{ reorderMode }}" hint-placeholder-val="{{ false }}">
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden">
+              <sc-for list="{{ reorderList }}" as="p" hint-placeholder-count="8">
+                <div style="display:flex;align-items:center;gap:8px;padding:4px 8px 4px 14px;border-bottom:1px solid var(--line-soft);height:53px;border-left:4px solid {{ p.rail }};background:var(--card);transform:translateY({{ p.dragDy }});transition:{{ p.dragTransition }};box-shadow:{{ p.dragShadow }};position:relative;z-index:{{ p.dragZ }}">
+                  <div style="flex:1;min-width:0;display:flex;align-items:center;gap:6px"><span style="font-size:13px;font-weight:700">{{ p.name }}</span><span style="font-size:9.5px;font-weight:800;color:{{ p.badgeColor }};background:{{ p.badgeBg }};padding:1px 6px;border-radius:4px">{{ p.statusWord }}</span></div>
+                  <span onPointerDown="{{ p.handleDown }}" tabindex="0" style="width:44px;height:44px;display:grid;place-items:center;font-size:18px;color:var(--muted);cursor:grab;touch-action:none;user-select:none">≡</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="font-size:11px;color:var(--muted);margin-top:6px;padding:0 2px">Hold ≡ and drag — order is saved to the dashboard (shared with desktop), Notion untouched.</div>
+          </sc-if>
+          <sc-if value="{{ reorderOff }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <sc-for list="{{ radarTop }}" as="p" hint-placeholder-count="3">
+              <div onClick="{{ p.expand }}" tabindex="0" style="background:var(--card);border:1px solid var(--line);border-left:4px solid {{ p.rail }};border-radius:12px;padding:12px 14px;cursor:pointer;opacity:{{ p.opacity }}">
+                <div style="display:flex;align-items:center;gap:6px"><span style="font-size:14px;font-weight:700;flex:1">{{ p.name }}</span><span style="font-size:10px;font-weight:800;color:{{ p.badgeColor }};background:{{ p.badgeBg }};padding:2px 7px;border-radius:5px">{{ p.statusWord }}</span></div>
+                <div style="font-size:11.5px;color:var(--muted);font-weight:600;margin-top:1px">{{ p.client }}</div>
+                <div style="display:flex;flex-direction:column;gap:3px;margin-top:7px">
+                  <sc-for list="{{ p.concerns }}" as="c" hint-placeholder-count="2">
+                    <div style="display:flex;gap:6px;font-size:12.5px;color:var(--ink);line-height:1.35"><span style="color:{{ c.dot }};font-weight:800;flex:none">•</span><span>{{ c.text }}</span></div>
+                  </sc-for>
+                </div>
+                <div style="display:flex;gap:5px;margin-top:9px;padding-top:9px;border-top:1px solid var(--line-soft);flex-wrap:wrap">
+                  <sc-for list="{{ p.chips }}" as="ch" hint-placeholder-count="2">
+                    <span style="font-size:10.5px;font-weight:700;color:{{ ch.color }};background:{{ ch.bg }};padding:2px 7px;border-radius:99px">{{ ch.text }}</span>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:10px">
+            <sc-for list="{{ radarRest }}" as="p" hint-placeholder-count="5">
+              <div onClick="{{ p.expand }}" tabindex="0" style="display:flex;align-items:center;gap:9px;padding:10px 14px;border-bottom:1px solid var(--line-soft);min-height:48px;cursor:pointer;border-left:4px solid {{ p.rail }};opacity:{{ p.opacity }}">
+                <div style="flex:1;min-width:0">
+                  <div style="display:flex;align-items:center;gap:6px"><span style="font-size:13px;font-weight:700">{{ p.name }}</span><span style="font-size:9.5px;font-weight:800;color:{{ p.badgeColor }};background:{{ p.badgeBg }};padding:1px 6px;border-radius:4px">{{ p.statusWord }}</span></div>
+                  <div style="font-size:11.5px;color:var(--muted);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.topConcern }}</div>
+                </div>
+                <span style="font-size:13px;color:var(--muted);flex:none">›</span>
+              </div>
+            </sc-for>
+          </div>
+          </sc-if>
+        </div>
+        </sc-if>
+
+        <!-- ============ TO-DO ============ -->
+        <sc-if value="{{ isTodo }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1;overflow-y:auto;padding:2px 16px 96px" data-screen-label="Mobile To-do">
+          <div style="display:flex;gap:6px;overflow-x:auto;margin:6px -16px 10px;padding:0 16px">
+            <sc-for list="{{ filterChips }}" as="f" hint-placeholder-count="5">
+              <div onClick="{{ f.go }}" tabindex="0" style="flex:none;font-size:12.5px;font-weight:{{ f.weight }};color:{{ f.color }};background:{{ f.bg }};border:1px solid {{ f.border }};border-radius:99px;padding:8px 14px;cursor:pointer;white-space:nowrap">{{ f.label }}</div>
+            </sc-for>
+            <div onClick="{{ toggleCompleted }}" tabindex="0" style="flex:none;font-size:12.5px;font-weight:600;color:{{ completedColor }};border:1px dashed var(--line2);border-radius:99px;padding:8px 14px;cursor:pointer;white-space:nowrap">{{ completedLabel }}</div>
+          </div>
+          <sc-if value="{{ todoEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:26px;text-align:center;font-size:13.5px;color:var(--muted)">{{ todoEmptyLine }}</div>
+          </sc-if>
+          <sc-for list="{{ todoGroupsList }}" as="g" hint-placeholder-count="3">
+            <div style="display:flex;align-items:baseline;gap:8px;margin:2px 2px 5px"><span style="font-size:10.5px;font-weight:800;letter-spacing:.07em;color:{{ g.labelColor }}">{{ g.label }}</span><span style="font-size:11px;color:var(--muted)">{{ g.count }}</span></div>
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:12px">
+              <sc-for list="{{ g.tasks }}" as="t" hint-placeholder-count="4">
+                <div style="position:relative;overflow:hidden;border-bottom:1px solid var(--line-soft)">
+                <div style="position:absolute;inset:0;background:var(--green);color:#fff;display:flex;align-items:center;padding-left:18px;font-weight:800;font-size:13px;opacity:{{ t.doneRevealOpacity }}">✓ Done</div>
+                <div style="position:absolute;top:0;bottom:0;right:0;display:flex">
+                  <div onClick="{{ t.swipeSnooze }}" style="width:88px;background:var(--amber);color:#fff;display:grid;place-items:center;font-size:11.5px;font-weight:800;text-align:center;cursor:pointer;line-height:1.3">Snooze<br>Tmrw</div>
+                  <div onClick="{{ t.swipeMore }}" style="width:68px;background:var(--panel);color:var(--soft);display:grid;place-items:center;font-size:11.5px;font-weight:800;cursor:pointer">More</div>
+                </div>
+                <div onClick="{{ t.open }}" onPointerDown="{{ t.pressDown }}" onPointerMove="{{ t.pressMove }}" onPointerUp="{{ t.pressUp }}" onPointerCancel="{{ t.pressUp }}" tabindex="0" style="display:flex;align-items:center;gap:12px;padding:11px 14px;min-height:52px;opacity:{{ t.opacity }};cursor:pointer;background:var(--card);transform:translateX({{ t.swipeDx }});transition:{{ t.swipeTransition }};touch-action:pan-y;position:relative">
+                  <span onClick="{{ t.toggle }}" tabindex="0" role="checkbox" style="width:44px;height:44px;margin:-11px -11px -11px -14px;display:grid;place-items:center;cursor:pointer;flex:none"><span style="width:22px;height:22px;border:1.5px solid {{ t.boxBorder }};border-radius:7px;background:{{ t.boxBg }};color:#fff;display:grid;place-items:center;font-size:12px;font-weight:800">{{ t.check }}</span></span>
+                  <div style="flex:1;min-width:0">
+                    <div style="font-size:14px;font-weight:600;color:{{ t.nameColor }};text-decoration:{{ t.strike }};line-height:1.3">{{ t.name }}</div>
+                    <div style="display:flex;gap:6px;margin-top:3px;align-items:center;flex-wrap:wrap">
+                      <span style="font-size:11px;font-weight:600;color:{{ t.clientChipColor }};background:{{ t.clientChipBg }};padding:1px 7px;border-radius:99px">{{ t.clientChip }}</span>
+                      <sc-if value="{{ t.hasProject }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;font-weight:600;color:{{ t.projChipColor }};background:{{ t.projChipBg }};border:1px solid {{ t.projChipBorder }};padding:1px 7px;border-radius:99px">{{ t.project }}</span></sc-if>
+                      <span style="font-size:11.5px;font-weight:700;color:{{ t.dueColor }};font-variant-numeric:tabular-nums">{{ t.dueDisplay }}</span>
+                      <sc-if value="{{ t.failed }}" hint-placeholder-val="{{ false }}"><span onClick="{{ t.retry }}" style="font-size:10.5px;font-weight:800;color:#fff;background:var(--red);padding:1px 7px;border-radius:5px">Sync failed · Retry</span></sc-if>
+                    </div>
+                  </div>
+                  <span style="font-size:10px;font-weight:800;color:{{ t.prColor }};background:{{ t.prBg }};padding:2px 7px;border-radius:5px;flex:none">{{ t.priority }}</span>
+                </div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:4px;padding:0 2px">Hold a task for quick actions · sorted overdue → today → upcoming</div>
+        </div>
+        </sc-if>
+
+        <!-- ============ PROJECTS ============ -->
+        <sc-if value="{{ isProjects }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1;overflow-y:auto;padding:2px 16px 96px" data-screen-label="Mobile Projects">
+          <div style="display:flex;align-items:baseline;gap:8px;margin:6px 2px 2px"><span style="font-size:11.5px;color:var(--muted)">Reorder is saved to the dashboard — Notion untouched</span><span onClick="{{ reorderToggle }}" tabindex="0" style="margin-left:auto;font-size:12px;font-weight:700;color:{{ reorderColor }};cursor:pointer">{{ reorderLabel }}</span></div>
+          <sc-if value="{{ reorderMode }}" hint-placeholder-val="{{ false }}">
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:6px">
+              <sc-for list="{{ reorderList }}" as="p" hint-placeholder-count="8">
+                <div style="display:flex;align-items:center;gap:8px;padding:4px 8px 4px 14px;border-bottom:1px solid var(--line-soft);height:53px;border-left:4px solid {{ p.rail }};background:var(--card);transform:translateY({{ p.dragDy }});transition:{{ p.dragTransition }};box-shadow:{{ p.dragShadow }};position:relative;z-index:{{ p.dragZ }}">
+                  <div style="flex:1;min-width:0;display:flex;align-items:center;gap:6px"><span style="font-size:13px;font-weight:700">{{ p.name }}</span><span style="font-size:9.5px;font-weight:800;color:{{ p.badgeColor }};background:{{ p.badgeBg }};padding:1px 6px;border-radius:4px">{{ p.statusWord }}</span></div>
+                  <span onPointerDown="{{ p.handleDown }}" tabindex="0" style="width:44px;height:44px;display:grid;place-items:center;font-size:18px;color:var(--muted);cursor:grab;touch-action:none;user-select:none">≡</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ reorderOff }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:10px;margin-top:6px">
+            <sc-for list="{{ projects }}" as="p" hint-placeholder-count="8">
+              <div onClick="{{ p.expand }}" tabindex="0" style="background:var(--card);border:1px solid var(--line);border-left:4px solid {{ p.rail }};border-radius:12px;padding:12px 14px;cursor:pointer;opacity:{{ p.opacity }}">
+                <div style="display:flex;align-items:center;gap:6px"><span style="font-size:14px;font-weight:700;flex:1">{{ p.name }}</span><span style="font-size:10px;font-weight:800;color:{{ p.badgeColor }};background:{{ p.badgeBg }};padding:2px 7px;border-radius:5px">{{ p.statusWord }}</span></div>
+                <div style="font-size:11.5px;color:var(--muted);font-weight:600;margin-top:1px">{{ p.client }}</div>
+                <div style="display:flex;flex-direction:column;gap:3px;margin-top:7px">
+                  <sc-for list="{{ p.concerns }}" as="c" hint-placeholder-count="2">
+                    <div style="display:flex;gap:6px;font-size:12.5px;color:var(--ink);line-height:1.35"><span style="color:{{ c.dot }};font-weight:800;flex:none">•</span><span>{{ c.text }}</span></div>
+                  </sc-for>
+                </div>
+                <div style="display:flex;gap:5px;margin-top:9px;padding-top:9px;border-top:1px solid var(--line-soft);flex-wrap:wrap">
+                  <sc-for list="{{ p.chips }}" as="ch" hint-placeholder-count="2">
+                    <span style="font-size:10.5px;font-weight:700;color:{{ ch.color }};background:{{ ch.bg }};padding:2px 7px;border-radius:99px">{{ ch.text }}</span>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          </sc-if>
+        </div>
+        </sc-if>
+
+        <!-- ============ CALENDAR ============ -->
+        <sc-if value="{{ isCalendar }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1;overflow-y:auto;padding:2px 16px 96px" data-screen-label="Mobile Calendar">
+          <div style="display:flex;background:var(--panel);border-radius:9px;padding:2px;margin:6px 0 14px">
+            <div onClick="{{ calSetThis }}" tabindex="0" style="flex:1;text-align:center;padding:8px 0;border-radius:7px;background:{{ calThisBg }};font-size:12.5px;font-weight:700;color:{{ calThisColor }};cursor:pointer;box-shadow:{{ calThisShadow }}">This week</div>
+            <div onClick="{{ calSetNext }}" tabindex="0" style="flex:1;text-align:center;padding:8px 0;border-radius:7px;background:{{ calNextBg }};font-size:12.5px;font-weight:700;color:{{ calNextColor }};cursor:pointer;box-shadow:{{ calNextShadow }}">Next week</div>
+          </div>
+          <sc-for list="{{ calDays }}" as="day" hint-placeholder-count="5">
+            <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:6px"><span style="font-size:12px;font-weight:800;letter-spacing:.05em;color:{{ day.labelColor }}">{{ day.label }}</span><sc-if value="{{ day.isToday }}" hint-placeholder-val="{{ false }}"><span style="font-size:9.5px;font-weight:800;color:#fff;background:var(--green);padding:1px 6px;border-radius:4px;letter-spacing:.04em">TODAY</span></sc-if></div>
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:14px;overflow:hidden">
+              <sc-if value="{{ day.empty }}" hint-placeholder-val="{{ false }}"><div style="padding:13px 14px;font-size:12.5px;color:var(--muted)">No meetings — clear day.</div></sc-if>
+              <sc-for list="{{ day.events }}" as="ev" hint-placeholder-count="2">
+                <div onClick="{{ ev.open }}" tabindex="0" style="display:flex;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line-soft);min-height:48px;opacity:{{ ev.opacity }};background:{{ ev.bg }};border-left:3px solid {{ ev.rail }};cursor:pointer;align-items:center">
+                  <div style="width:78px;flex:none;font-size:12px;font-weight:700;color:{{ ev.timeColor }};font-variant-numeric:tabular-nums;line-height:1.3">{{ ev.time }}</div>
+                  <div style="flex:1;min-width:0">
+                    <div style="font-size:13.5px;font-weight:700;color:{{ ev.titleColor }};line-height:1.3">{{ ev.title }}</div>
+                    <div style="display:flex;align-items:center;gap:6px;margin-top:2px"><span style="font-size:11px;color:var(--muted)">{{ ev.locLabel }}</span><sc-if value="{{ ev.hasJoin }}" hint-placeholder-val="{{ false }}"><a href="{{ ev.joinUrl }}" target="_blank" onClick="{{ swallow }}" style="font-size:10px;font-weight:800;color:var(--green);background:var(--green-soft);padding:1px 5px;border-radius:4px">{{ ev.join }} ↗</a></sc-if></div>
+                  </div>
+                  <sc-if value="{{ ev.hasTag }}" hint-placeholder-val="{{ false }}"><div style="font-size:9.5px;font-weight:800;color:{{ ev.tagColor }};background:{{ ev.tagBg }};padding:2px 6px;border-radius:4px;flex:none">{{ ev.tag }}</div></sc-if>
+                  <div style="font-size:13px;color:var(--muted);flex:none">›</div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+        </sc-if>
+
+        <!-- FAB -->
+        <div onClick="{{ openQa }}" tabindex="0" style="position:absolute;right:16px;bottom:100px;width:54px;height:54px;border-radius:99px;background:var(--green);color:#fff;display:grid;place-items:center;font-size:26px;font-weight:600;box-shadow:0 6px 18px var(--shadow-deep);cursor:pointer;z-index:30">+</div>
+
+        <!-- bottom nav (E4: safe-area) -->
+        <div style="position:absolute;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:flex;padding:6px 8px calc(14px + env(safe-area-inset-bottom, 6px));z-index:30">
+          <sc-for list="{{ navItems }}" as="nav" hint-placeholder-count="4">
+            <div onClick="{{ nav.go }}" tabindex="0" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;cursor:pointer;min-height:44px">
+              <span style="width:26px;height:3px;border-radius:2px;background:{{ nav.dash }}"></span>
+              <span style="font-size:12px;font-weight:{{ nav.weight }};color:{{ nav.color }}">{{ nav.label }}</span>
+              <span style="font-size:10px;font-weight:700;color:var(--muted)">{{ nav.count }}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <!-- ============ Sheet stack ============ -->
+        <sc-if value="{{ sheetOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;inset:0;z-index:50">
+            <div onClick="{{ closeSheets }}" style="position:absolute;inset:0;background:rgba(18,16,12,.42)"></div>
+            <div onClick="{{ swallow }}" style="position:absolute;left:0;right:0;bottom:0;max-height:88%;background:var(--card);border-radius:20px 20px 0 0;animation:sheetUp .22s ease;display:flex;flex-direction:column;overflow:hidden">
+              <div style="flex:none;display:grid;place-items:center;padding:8px 0 2px"><span style="width:38px;height:4.5px;border-radius:99px;background:var(--box-border)"></span></div>
+              <div style="flex:none;display:flex;align-items:center;gap:8px;padding:8px 18px 10px;border-bottom:1px solid var(--line-soft)">
+                <sc-if value="{{ sheetHasBack }}" hint-placeholder-val="{{ false }}">
+                  <span onClick="{{ popSheet }}" tabindex="0" style="font-size:13px;font-weight:700;color:var(--green);cursor:pointer;padding:4px 6px 4px 0;white-space:nowrap">← {{ sheetBackLabel }}</span>
+                </sc-if>
+                <span style="font-size:15px;font-weight:800;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ sheetTitle }}</span>
+                <span onClick="{{ closeSheets }}" tabindex="0" style="color:var(--muted);font-size:16px;cursor:pointer;padding:4px 6px">✕</span>
+              </div>
+              <div style="flex:1;overflow-y:auto;padding:14px 18px 26px">
+
+                <!-- A5: quick actions sheet -->
+                <sc-if value="{{ shActions }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size:14px;font-weight:700;margin-bottom:12px;line-height:1.35">{{ actTaskName }}</div>
+                  <div onClick="{{ actDone }}" tabindex="0" style="display:flex;align-items:center;gap:10px;background:var(--green);color:#fff;font-weight:800;font-size:14px;padding:13px 16px;border-radius:10px;cursor:pointer;margin-bottom:10px"><span>✓</span>{{ actDoneLabel }}</div>
+                  <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.04em;margin-bottom:5px">SNOOZE TO</div>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+                    <sc-for list="{{ actSnoozeOpts }}" as="o" hint-placeholder-count="3"><span onClick="{{ o.pick }}" tabindex="0" style="font-size:12.5px;font-weight:700;color:var(--soft);background:var(--card);border:1px solid var(--line2);border-radius:99px;padding:9px 14px;cursor:pointer">{{ o.label }}</span></sc-for>
+                    <input type="date" onChange="{{ actSnoozeDate }}" style="font-size:12px;color:var(--soft);background:var(--card);border:1px solid var(--line2);border-radius:99px;padding:7px 12px;width:140px"></input>
+                  </div>
+                  <div onClick="{{ actNote }}" tabindex="0" style="border:1px solid var(--line2);border-radius:10px;padding:12px 0;text-align:center;font-size:13px;font-weight:700;color:var(--soft);cursor:pointer;margin-bottom:8px">✎ Add note</div>
+                  <div onClick="{{ actEdit }}" tabindex="0" style="border:1px solid var(--line2);border-radius:10px;padding:12px 0;text-align:center;font-size:13px;font-weight:700;color:var(--soft);cursor:pointer">Open full editor</div>
+                </sc-if>
+
+                <!-- task editor -->
+                <sc-if value="{{ shTask }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.04em;margin-bottom:4px">TASK NAME</div>
+                  <input value="{{ drName }}" onChange="{{ onDrName }}" style="width:100%;border:1px solid var(--line2);border-radius:9px;padding:11px 12px;font-size:14px;font-weight:600;color:var(--ink);margin-bottom:14px;outline-color:var(--green);background:var(--card-alt)"></input>
+                  <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.04em;margin-bottom:5px">STATUS</div>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+                    <sc-for list="{{ drStatusOpts }}" as="o" hint-placeholder-count="4"><span onClick="{{ o.pick }}" tabindex="0" style="font-size:12.5px;font-weight:700;color:{{ o.color }};background:{{ o.bg }};border:1px solid {{ o.border }};border-radius:99px;padding:9px 13px;cursor:pointer">{{ o.label }}</span></sc-for>
+                  </div>
+                  <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.04em;margin-bottom:5px">PRIORITY</div>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+                    <sc-for list="{{ drPriorityOpts }}" as="o" hint-placeholder-count="5"><span onClick="{{ o.pick }}" tabindex="0" style="font-size:12.5px;font-weight:700;color:{{ o.color }};background:{{ o.bg }};border:1px solid {{ o.border }};border-radius:99px;padding:9px 13px;cursor:pointer">{{ o.label }}</span></sc-for>
+                  </div>
+                  <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.04em;margin-bottom:5px">DUE</div>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
+                    <sc-for list="{{ drDueOpts }}" as="o" hint-placeholder-count="5"><span onClick="{{ o.pick }}" tabindex="0" style="font-size:12.5px;font-weight:700;color:{{ o.color }};background:{{ o.bg }};border:1px solid {{ o.border }};border-radius:99px;padding:9px 13px;cursor:pointer">{{ o.label }}</span></sc-for>
+                    <input type="date" value="{{ drCustomDue }}" onChange="{{ drDuePick }}" style="font-size:12px;color:var(--soft);background:var(--card);border:1px solid var(--line2);border-radius:99px;padding:7px 12px;width:140px"></input>
+                  </div>
+                  <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.04em;margin-bottom:5px">CATEGORY</div>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+                    <sc-for list="{{ drCategoryOpts }}" as="o" hint-placeholder-count="2"><span onClick="{{ o.pick }}" tabindex="0" style="font-size:12.5px;font-weight:700;color:{{ o.color }};background:{{ o.bg }};border:1px solid {{ o.border }};border-radius:99px;padding:9px 13px;cursor:pointer">{{ o.label }}</span></sc-for>
+                  </div>
+                  <sc-if value="{{ drIsWork }}" hint-placeholder-val="{{ true }}">
+                    <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.04em;margin-bottom:5px">CLIENT <span style="color:var(--red)">*</span></div>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+                      <sc-for list="{{ drClientOpts }}" as="o" hint-placeholder-count="4"><span onClick="{{ o.pick }}" tabindex="0" style="font-size:12.5px;font-weight:700;color:{{ o.color }};background:{{ o.bg }};border:1px solid {{ o.border }};border-radius:99px;padding:9px 13px;cursor:pointer">{{ o.label }}</span></sc-for>
+                    </div>
+                    <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.04em;margin-bottom:5px">PROJECT</div>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+                      <sc-for list="{{ drProjectOpts }}" as="o" hint-placeholder-count="3"><span onClick="{{ o.pick }}" tabindex="0" style="font-size:12.5px;font-weight:700;color:{{ o.color }};background:{{ o.bg }};border:1px solid {{ o.border }};border-radius:99px;padding:9px 13px;cursor:pointer">{{ o.label }}</span></sc-for>
+                    </div>
+                  </sc-if>
+                  <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.04em;margin-bottom:4px">NOTES</div>
+                  <textarea value="{{ drNotes }}" onChange="{{ onDrNotes }}" data-cc-notes="1" style="width:100%;border:1px solid var(--line2);border-radius:9px;padding:10px 12px;font-size:13px;color:var(--soft);min-height:64px;margin-bottom:16px;line-height:1.45;resize:vertical;outline-color:var(--green);background:var(--card-alt)"></textarea>
+                  <sc-if value="{{ drFailed }}" hint-placeholder-val="{{ false }}">
+                    <div style="border:1px solid var(--red);background:var(--red-soft);border-radius:10px;padding:10px 13px;margin-bottom:12px;display:flex;align-items:center;gap:10px">
+                      <span style="font-size:12.5px;font-weight:700;color:var(--red);flex:1">Couldn't reach Notion.</span>
+                      <span onClick="{{ drRetry }}" tabindex="0" style="font-size:12.5px;font-weight:800;color:#fff;background:var(--red);padding:6px 12px;border-radius:7px;cursor:pointer">Retry</span>
+                      <span onClick="{{ drRevert }}" tabindex="0" style="font-size:12.5px;font-weight:700;color:var(--soft);cursor:pointer">Revert</span>
+                    </div>
+                  </sc-if>
+                  <div onClick="{{ drawerSave }}" tabindex="0" style="background:var(--green);color:#fff;text-align:center;font-weight:800;font-size:14px;padding:13px 0;border-radius:10px;cursor:pointer">{{ drSaveLabel }}</div>
+                  <div style="font-size:11px;color:var(--muted);margin-top:10px;display:flex;align-items:center;gap:6px"><span style="width:6px;height:6px;border-radius:99px;background:{{ drSyncDot }}"></span>{{ drSyncLabel }}<span style="flex:1"></span><a href="{{ notionUrl }}" target="_blank" style="font-weight:700;font-size:11.5px">Open in Notion ↗</a></div>
+                </sc-if>
+
+                <!-- project detail -->
+                <sc-if value="{{ shProject }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;align-items:center;gap:8px"><span style="font-size:10.5px;font-weight:800;color:{{ expBadgeColor }};background:{{ expBadgeBg }};padding:2px 8px;border-radius:5px">{{ expStatusWord }}</span><span style="font-size:12.5px;color:var(--muted);font-weight:600">{{ expClient }}</span><a href="{{ notionUrl }}" target="_blank" style="margin-left:auto;font-size:12px;font-weight:700">Open in Notion ↗</a></div>
+                  <div style="font-weight:800;color:var(--muted);font-size:10.5px;letter-spacing:.04em;margin-top:14px">CURRENT CONCERNS</div>
+                  <div style="display:flex;flex-direction:column;gap:5px;margin-top:5px">
+                    <sc-for list="{{ expConcerns }}" as="c" hint-placeholder-count="3">
+                      <div style="display:flex;gap:7px;font-size:13.5px;color:var(--ink);line-height:1.45"><span style="color:{{ c.dot }};font-weight:800;flex:none">•</span><span>{{ c.text }}</span></div>
+                    </sc-for>
+                  </div>
+                  <div style="font-size:13.5px;color:var(--soft);margin-top:12px;line-height:1.5"><span style="font-weight:800;color:var(--muted);font-size:10.5px;letter-spacing:.04em">CURRENT STATUS</span><br>{{ expStatusText }}</div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:14px;padding:11px 12px;background:var(--card-alt);border-radius:10px">
+                    <div><div style="font-size:10px;font-weight:800;color:var(--muted);letter-spacing:.04em">CADENCE</div><div style="font-size:12.5px;font-weight:700;margin-top:1px">{{ expCadence }}</div></div>
+                    <div><div style="font-size:10px;font-weight:800;color:var(--muted);letter-spacing:.04em">LAST</div><div style="font-size:12.5px;font-weight:700;color:{{ expLastColor }};margin-top:1px">{{ expLast }}</div></div>
+                    <div><div style="font-size:10px;font-weight:800;color:var(--muted);letter-spacing:.04em">NEXT</div><div style="font-size:12.5px;font-weight:700;color:{{ expNextColor }};margin-top:1px">{{ expNext }}</div></div>
+                  </div>
+                  <div style="font-size:10.5px;font-weight:800;color:var(--muted);letter-spacing:.04em;margin-top:14px;margin-bottom:2px">RELATED TASKS · {{ expTaskCount }}</div>
+                  <sc-for list="{{ expTasks }}" as="t" hint-placeholder-count="2">
+                    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line-soft);min-height:44px">
+                      <span onClick="{{ t.toggle }}" tabindex="0" style="width:44px;height:44px;margin:-10px -12px -10px -12px;display:grid;place-items:center;cursor:pointer;flex:none"><span style="width:20px;height:20px;border:1.5px solid {{ t.boxBorder }};border-radius:6px;background:{{ t.boxBg }};color:#fff;display:grid;place-items:center;font-size:11px;font-weight:800">{{ t.check }}</span></span>
+                      <span onClick="{{ t.push }}" tabindex="0" style="font-size:13.5px;font-weight:600;color:{{ t.nameColor }};flex:1;text-decoration:{{ t.strike }};cursor:pointer">{{ t.name }}</span>
+                      <span style="font-size:12px;font-weight:700;color:{{ t.dueColor }}">{{ t.dueDisplay }}</span>
+                      <span style="font-size:13px;color:var(--muted)">›</span>
+                    </div>
+                  </sc-for>
+                  <sc-if value="{{ expNoTasks }}" hint-placeholder-val="{{ false }}"><div style="font-size:12.5px;color:var(--muted);padding:10px 0;border-top:1px solid var(--line-soft)">No open tasks on this project.</div></sc-if>
+                  <div onClick="{{ expAddTask }}" tabindex="0" style="margin-top:14px;border:1.5px dashed var(--green);border-radius:10px;padding:11px 0;text-align:center;font-size:13px;font-weight:700;color:var(--green);cursor:pointer;opacity:.9">+ Add task to this project</div>
+                  <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line-soft);font-size:11.5px;color:var(--muted)">Read-only — edit project details in Notion. Tasks above are live.</div>
+                </sc-if>
+
+                <!-- event detail -->
+                <sc-if value="{{ shEvent }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;align-items:center;gap:8px"><span style="font-size:12.5px;color:var(--muted);font-weight:600">{{ evDay }} · <span style="font-variant-numeric:tabular-nums">{{ evTime }}</span></span><sc-if value="{{ evHasTag }}" hint-placeholder-val="{{ false }}"><span style="font-size:10px;font-weight:800;color:{{ evTagColor }};background:{{ evTagBg }};padding:2px 7px;border-radius:4px;letter-spacing:.03em">{{ evTag }}</span></sc-if></div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px;padding:11px 12px;background:var(--card-alt);border-radius:10px">
+                    <div><div style="font-size:10px;font-weight:800;color:var(--muted);letter-spacing:.04em">WHERE</div><div style="font-size:12.5px;font-weight:700;margin-top:1px">{{ evLocation }}</div></div>
+                    <div><div style="font-size:10px;font-weight:800;color:var(--muted);letter-spacing:.04em">CLIENT · PROJECT</div><div style="font-size:12.5px;font-weight:700;margin-top:1px">{{ evLinked }}</div></div>
+                  </div>
+                  <sc-if value="{{ evHasJoin }}" hint-placeholder-val="{{ false }}">
+                    <a href="{{ evJoinUrl }}" target="_blank" style="display:block;margin-top:12px;background:var(--green);color:#fff;text-align:center;font-weight:800;font-size:14px;padding:12px 0;border-radius:10px">Join {{ evJoin }} ↗</a>
+                  </sc-if>
+                  <div style="font-weight:800;color:var(--muted);font-size:10.5px;letter-spacing:.04em;margin-top:14px">ATTENDEES · {{ evAttendeeCount }}</div>
+                  <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px">
+                    <sc-for list="{{ evAttendees }}" as="att" hint-placeholder-count="3">
+                      <span style="font-size:12px;font-weight:600;color:var(--soft);background:var(--panel);padding:4px 10px;border-radius:99px">{{ att.name }}</span>
+                    </sc-for>
+                  </div>
+                  <div style="font-weight:800;color:var(--muted);font-size:10.5px;letter-spacing:.04em;margin-top:14px">AGENDA</div>
+                  <div style="font-size:13.5px;color:var(--ink);line-height:1.5;margin-top:4px">{{ evAgenda }}</div>
+                  <div onClick="{{ evAddTask }}" tabindex="0" style="margin-top:14px;border:1.5px dashed var(--green);border-radius:10px;padding:11px 0;text-align:center;font-size:13px;font-weight:700;color:var(--green);cursor:pointer;opacity:.9">+ Add task from this meeting</div>
+                  <sc-if value="{{ evHasProject }}" hint-placeholder-val="{{ false }}">
+                    <div onClick="{{ evOpenProject }}" tabindex="0" style="margin-top:8px;border:1px solid var(--line2);border-radius:10px;padding:11px 12px;text-align:center;font-size:13px;font-weight:700;color:var(--green);cursor:pointer">Open project: {{ evProject }} →</div>
+                  </sc-if>
+                  <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line-soft);font-size:11.5px;color:var(--muted)">Read-only — synced from Google Calendar.</div>
+                </sc-if>
+
+                <!-- quick add -->
+                <sc-if value="{{ shQa }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;background:var(--panel);border-radius:9px;padding:2px;margin-bottom:14px">
+                    <div onClick="{{ qaSetWork }}" tabindex="0" style="flex:1;text-align:center;padding:9px 0;border-radius:7px;background:{{ qaWorkBg }};font-size:13px;font-weight:700;color:{{ qaWorkColor }};cursor:pointer;box-shadow:{{ qaWorkShadow }}">Work</div>
+                    <div onClick="{{ qaSetPersonal }}" tabindex="0" style="flex:1;text-align:center;padding:9px 0;border-radius:7px;background:{{ qaPersonalBg }};font-size:13px;font-weight:700;color:{{ qaPersonalColor }};cursor:pointer;box-shadow:{{ qaPersonalShadow }}">Personal</div>
+                  </div>
+                  <input placeholder="What needs doing?  (try: borax sitemap fri asap)" value="{{ qaName }}" onChange="{{ onQaName }}" style="width:100%;border:1.5px solid {{ qaBorder }};border-radius:10px;padding:12px;font-size:14.5px;font-weight:600;color:var(--ink);margin-bottom:8px;outline:none;background:var(--card-alt)"></input>
+                  <sc-if value="{{ qaParsedVisible }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;flex-wrap:wrap;font-size:11.5px;color:var(--muted)">Detected:
+                      <sc-for list="{{ qaParsedChips }}" as="pc" hint-placeholder-count="2"><span style="font-size:11px;font-weight:700;color:var(--green);background:var(--green-soft);padding:2px 8px;border-radius:99px">{{ pc.label }}</span></sc-for>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ qaIsWork }}" hint-placeholder-val="{{ true }}">
+                    <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.04em;margin-bottom:5px">CLIENT <span style="color:var(--red)">*</span></div>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+                      <sc-for list="{{ qaClientOpts }}" as="o" hint-placeholder-count="4"><span onClick="{{ o.pick }}" tabindex="0" style="font-size:12.5px;font-weight:700;color:{{ o.color }};background:{{ o.bg }};border:1px solid {{ o.border }};border-radius:99px;padding:9px 13px;cursor:pointer">{{ o.label }}</span></sc-for>
+                    </div>
+                    <sc-if value="{{ qaHasProjects }}" hint-placeholder-val="{{ false }}">
+                      <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.04em;margin-bottom:5px">PROJECT</div>
+                      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+                        <sc-for list="{{ qaProjectOpts }}" as="o" hint-placeholder-count="2"><span onClick="{{ o.pick }}" tabindex="0" style="font-size:12.5px;font-weight:700;color:{{ o.color }};background:{{ o.bg }};border:1px solid {{ o.border }};border-radius:99px;padding:9px 13px;cursor:pointer">{{ o.label }}</span></sc-for>
+                      </div>
+                    </sc-if>
+                  </sc-if>
+                  <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.04em;margin-bottom:5px">DUE</div>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
+                    <sc-for list="{{ qaDueOpts }}" as="o" hint-placeholder-count="3"><span onClick="{{ o.pick }}" tabindex="0" style="font-size:12.5px;font-weight:700;color:{{ o.color }};background:{{ o.bg }};border:1px solid {{ o.border }};border-radius:99px;padding:9px 13px;cursor:pointer">{{ o.label }}</span></sc-for>
+                    <input type="date" value="{{ qaCustomDue }}" onChange="{{ onQaCustomDue }}" style="font-size:12px;color:var(--soft);background:var(--card);border:1px solid var(--line2);border-radius:99px;padding:7px 12px;width:140px"></input>
+                  </div>
+                  <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.04em;margin-bottom:5px">PRIORITY</div>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+                    <sc-for list="{{ qaPriorityOpts }}" as="o" hint-placeholder-count="5"><span onClick="{{ o.pick }}" tabindex="0" style="font-size:12.5px;font-weight:700;color:{{ o.color }};background:{{ o.bg }};border:1px solid {{ o.border }};border-radius:99px;padding:9px 13px;cursor:pointer">{{ o.label }}</span></sc-for>
+                  </div>
+                  <div onClick="{{ qaToggleNote }}" tabindex="0" style="font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;margin-bottom:10px">{{ qaNoteToggleLabel }}</div>
+                  <sc-if value="{{ qaNoteOpen }}" hint-placeholder-val="{{ false }}">
+                    <textarea placeholder="Notes (optional)" value="{{ qaNotes }}" onChange="{{ onQaNotes }}" style="width:100%;border:1px solid var(--line2);border-radius:9px;padding:10px 12px;font-size:13px;color:var(--soft);min-height:56px;margin-bottom:14px;line-height:1.45;resize:vertical;outline-color:var(--green);background:var(--card-alt)"></textarea>
+                  </sc-if>
+                  <div onClick="{{ qaAdd }}" tabindex="0" style="background:var(--green);color:#fff;text-align:center;font-weight:800;font-size:14px;padding:13px 0;border-radius:10px;cursor:pointer">Add task</div>
+                  <div style="font-size:11.5px;color:{{ qaHintColor }};margin-top:10px;text-align:center">{{ qaHint }}</div>
+                </sc-if>
+
+                <!-- guppy -->
+                <sc-if value="{{ shGuppy }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;gap:10px;background:var(--card-alt);border-radius:12px;padding:14px;min-height:340px;margin-bottom:12px">
+                    <sc-for list="{{ guppyMsgs }}" as="m" hint-placeholder-count="2">
+                      <div style="align-self:{{ m.align }};background:{{ m.bg }};color:{{ m.color }};font-size:13.5px;padding:10px 13px;border-radius:{{ m.radius }};max-width:88%;line-height:1.5;border:{{ m.border }}">{{ m.text }}</div>
+                    </sc-for>
+                  </div>
+                  <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+                    <sc-for list="{{ guppyChips }}" as="c" hint-placeholder-count="3">
+                      <span onClick="{{ c.pick }}" tabindex="0" style="font-size:12px;font-weight:600;color:var(--soft);border:1px solid var(--line2);border-radius:99px;padding:7px 12px;cursor:pointer">{{ c.label }}</span>
+                    </sc-for>
+                  </div>
+                  <div style="border:1px solid var(--line2);border-radius:11px;padding:6px 6px 6px 14px;display:flex;align-items:center;gap:8px;background:var(--card-alt)">
+                    <input placeholder="Ask Guppy…" value="{{ guppyInput }}" onChange="{{ onGuppyInput }}" onKeyDown="{{ guppyKeyDown }}" style="flex:1;border:none;outline:none;font-size:13.5px;background:transparent;color:var(--ink)"></input>
+                    <div onClick="{{ guppySend }}" tabindex="0" style="width:34px;height:34px;border-radius:9px;background:var(--green);color:#fff;display:grid;place-items:center;font-weight:800;font-size:14px;cursor:pointer">↑</div>
+                  </div>
+                </sc-if>
+
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- toast -->
+        <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;left:50%;bottom:108px;transform:translateX(-50%);background:var(--toast-bg);color:var(--toast-text);font-size:12.5px;font-weight:600;padding:9px 16px;border-radius:99px;box-shadow:0 6px 20px var(--shadow-deep);z-index:60;animation:toastIn .18s ease;white-space:nowrap;display:flex;align-items:center;gap:12px;max-width:88%">{{ toast }}<sc-if value="{{ toastHasAction }}" hint-placeholder-val="{{ false }}"><span onClick="{{ toastAction }}" tabindex="0" style="font-weight:800;color:var(--toast-accent);cursor:pointer">{{ toastActionLabel }}</span></sc-if></div>
+        </sc-if>
+
+        <!-- home indicator -->
+        <div style="position:absolute;left:50%;bottom:7px;transform:translateX(-50%);width:130px;height:5px;border-radius:99px;background:var(--ink);opacity:.85;z-index:40"></div>
+      </div>
+    </div>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:520,&quot;height&quot;:980},&quot;simulateSaveFailure&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Prototype&quot;},&quot;simulateOutage&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;None&quot;,&quot;options&quot;:[&quot;None&quot;,&quot;Notion&quot;,&quot;Google Calendar&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototype&quot;}}">
+class Component extends DCLogic {
+  state = {
+    ready: false,
+    theme: 'light',
+    view: 'today',
+    tasks: [], projects: [], radarOrder: [],
+    stack: [],
+    dr: null, drOrig: null, drSync: 'idle',
+    qaName: '', qaCategory: 'Work', qaClient: '', qaProject: '', qaDueISO: '', qaPriority: 'Soon', qaError: false, qaNotes: '', qaNoteOpen: false,
+    guppyInput: '', guppyMsgs: [],
+    filter: 'all', showCompleted: false, calWeek: 'this', reorderMode: false,
+    swipe: null, dragId: null, dragDy: 0,
+    toast: null, syncedAgo: 2
+  };
+
+  componentDidMount() {
+    import('./data.js').then(D => {
+      this.D = D;
+      let theme = null;
+      try { theme = localStorage.getItem('cc-theme'); } catch (e) {}
+      if (theme !== 'light' && theme !== 'dark') theme = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+      this.applyTheme(theme);
+      let order = null;
+      try { order = JSON.parse(localStorage.getItem('cc-radar-order') || 'null'); } catch (e) {}
+      const projects = D.SEED_PROJECTS;
+      const valid = Array.isArray(order) && order.length === projects.length && projects.every(p => order.includes(p.id));
+      this.setState({ ready: true, theme, tasks: D.SEED_TASKS.map(t => ({ ...t })), projects, radarOrder: valid ? order : D.defaultRadarOrder(projects) });
+    });
+    this._t5 = setTimeout(() => this.patchTask('t5', { justDone: false }), 4000);
+    this._iv = setInterval(() => this.setState(s => ({ syncedAgo: s.syncedAgo + 1 })), 60000);
+  }
+  componentWillUnmount() { clearTimeout(this._t5); clearInterval(this._iv); }
+
+  applyTheme(theme) {
+    document.documentElement.dataset.theme = theme;
+    const m = document.querySelector('meta[name="theme-color"]');
+    if (m) m.setAttribute('content', theme === 'dark' ? '#12100C' : '#F7F5F1');
+  }
+  setTheme(theme) {
+    this.applyTheme(theme);
+    try { localStorage.setItem('cc-theme', theme); } catch (e) {}
+    this.setState({ theme });
+  }
+  P() { return this.D ? this.D.THEMES[this.state.theme] : null; }
+  simFail() { return !!(this.props.simulateSaveFailure ?? false); }
+
+  patchTask(id, patch) { this.setState(s => ({ tasks: s.tasks.map(t => t.id === id ? { ...t, ...patch } : t) })); }
+  showToast(msg, actionLabel, action) {
+    clearTimeout(this._toastT);
+    this.setState({ toast: { msg, actionLabel: actionLabel || '', action: action || null } });
+    this._toastT = setTimeout(() => this.setState({ toast: null }), actionLabel ? 5000 : 2400);
+  }
+  toggleTask(id, e) {
+    if (e) e.stopPropagation();
+    const t = this.state.tasks.find(x => x.id === id);
+    if (!t) return;
+    if (!t.done) {
+      if (this.simFail()) {
+        this.patchTask(id, { done: true, justDone: true, syncFailed: true });
+        this.showToast("Couldn't reach Notion — kept locally", 'Retry', () => this.retryTask(id));
+      } else {
+        this.patchTask(id, { done: true, justDone: true });
+        this.showToast('Marked done', 'Undo', () => this.patchTask(id, { done: false, justDone: false }));
+      }
+      clearTimeout(this._jd); this._jd = setTimeout(() => this.patchTask(id, { justDone: false }), 3000);
+    } else {
+      this.patchTask(id, { done: false, justDone: false, syncFailed: false });
+    }
+  }
+  retryTask(id) { this.patchTask(id, { syncFailed: false }); this.showToast('Saved to Notion ✓'); }
+  // ---- task row swipe gestures ----
+  rowDown(id, e) {
+    const sw = this.state.swipe;
+    if (sw && sw.id !== id) this.setState({ swipe: null });
+    this._swX = e.clientX; this._swY = e.clientY;
+    this._swBase = sw && sw.id === id && sw.open ? -156 : 0;
+    this._swId = id; this._swDrag = false;
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) {}
+    clearTimeout(this._lpT); this._lpFired = false;
+    this._lpT = setTimeout(() => { if (!this._swDrag) { this._lpFired = true; this.push({ type: 'actions', id }); } }, 480);
+  }
+  rowMove(id, e) {
+    if (this._swId !== id) return;
+    const dx = e.clientX - this._swX, dy = e.clientY - this._swY;
+    if (!this._swDrag) {
+      if (Math.abs(dy) > 12) { clearTimeout(this._lpT); return; }
+      if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) { this._swDrag = true; clearTimeout(this._lpT); }
+      else return;
+    }
+    let v = Math.max(-156, Math.min(120, this._swBase + dx));
+    this.setState({ swipe: { id, dx: v, dragging: true, open: false } });
+  }
+  rowUp(id) {
+    clearTimeout(this._lpT);
+    if (this._swId !== id) return;
+    this._swId = null;
+    if (!this._swDrag) return;
+    this._swDrag = false;
+    this._suppress = true;
+    const sw = this.state.swipe;
+    const dx = sw && sw.id === id ? sw.dx : 0;
+    if (dx > 80) { this.setState({ swipe: null }); this.toggleTask(id); }
+    else if (dx < -70) this.setState({ swipe: { id, dx: -156, dragging: false, open: true } });
+    else this.setState({ swipe: null });
+  }
+  // ---- reorder drag (window-level listeners so re-renders can't drop the drag) ----
+  startReorderDrag(id, e) {
+    e.preventDefault();
+    const row = e.currentTarget.parentElement;
+    this._rH = (row && row.getBoundingClientRect().height) || 53;
+    this._rY = e.clientY; this._rId = id;
+    this.setState({ dragId: id, dragDy: 0 });
+    this._rMove = (ev) => this.reorderMove(id, ev);
+    this._rUp = () => this.endReorderDrag();
+    window.addEventListener('pointermove', this._rMove);
+    window.addEventListener('pointerup', this._rUp);
+    window.addEventListener('pointercancel', this._rUp);
+  }
+  endReorderDrag() {
+    window.removeEventListener('pointermove', this._rMove);
+    window.removeEventListener('pointerup', this._rUp);
+    window.removeEventListener('pointercancel', this._rUp);
+    this._rId = null;
+    this.setState({ dragId: null, dragDy: 0 });
+  }
+  reorderMove(id, e) {
+    if (this._rId !== id) return;
+    let dy = e.clientY - this._rY;
+    const H = this._rH || 53;
+    let i = this.state.radarOrder.indexOf(id);
+    const len = this.state.radarOrder.length;
+    while (dy > H * 0.6 && i < len - 1) { this.moveRadar(id, 1); this._rY += H; dy -= H; i++; }
+    while (dy < -H * 0.6 && i > 0) { this.moveRadar(id, -1); this._rY -= H; dy += H; i--; }
+    this.setState({ dragDy: dy });
+  }
+  moveRadar(id, dir) {
+    // compute synchronously outside setState — persisting inside the updater
+    // can run with stale/duplicate copies under React batching
+    const order = this.state.radarOrder.slice();
+    const i = order.indexOf(id), j = i + dir;
+    if (i < 0 || j < 0 || j >= order.length) return;
+    order.splice(i, 1); order.splice(j, 0, id);
+    try { localStorage.setItem('cc-radar-order', JSON.stringify(order)); } catch (e) {}
+    this.setState({ radarOrder: order });
+  }
+  snoozeToISO(id, iso, label) {
+    const t = this.state.tasks.find(x => x.id === id);
+    const prev = t ? t.dueISO : '';
+    this.patchTask(id, { dueISO: iso });
+    this.showToast('Snoozed to ' + label, 'Undo', () => this.patchTask(id, { dueISO: prev }));
+  }
+  late(t) { return this.D ? this.D.dueMeta(t.dueISO).late : 0; }
+  isDueToday(t) { return !!t.dueISO && this.D && t.dueISO === this.D.TODAY_ISO; }
+  visible(t) { return !t.done || t.justDone; }
+
+  // ---- sheet stack ----
+  push(item) { this.setState(s => ({ stack: [...s.stack, item] })); }
+  pop() { this.setState(s => ({ stack: s.stack.slice(0, -1) })); }
+  closeAll() { this.setState({ stack: [], drSync: 'idle' }); }
+  top() { const st = this.state.stack; return st.length ? st[st.length - 1] : null; }
+  openTaskSheet(id, replace) {
+    const t = this.state.tasks.find(x => x.id === id);
+    if (!t) return;
+    this.setState(s => ({ stack: [...(replace ? s.stack.slice(0, -1) : s.stack), { type: 'task', id }], dr: { ...t }, drOrig: { ...t }, drSync: 'idle' }));
+  }
+  sheetLabel(item) {
+    if (!item) return '';
+    if (item.type === 'task') return 'Edit task';
+    if (item.type === 'actions') return 'Quick actions';
+    if (item.type === 'qa') return 'Add task';
+    if (item.type === 'guppy') return 'Guppy';
+    if (item.type === 'event') { const e = this.findEv(item.id); return e ? e.title : 'Event'; }
+    if (item.type === 'project') { const p = this.state.projects.find(x => x.id === item.id); return p ? p.name : 'Project'; }
+    return '';
+  }
+
+  enrich(t) {
+    const D = this.D, P = this.P();
+    const pr = P.PR[t.priority] || P.PR.SOON;
+    const dm = D.dueMeta(t.dueISO);
+    const sw = this.state.swipe;
+    const mine = !!(sw && sw.id === t.id);
+    const projChip = { projChipColor: P.green, projChipBg: P.greenSoft, projChipBorder: 'transparent' };
+    return {
+      ...t, ...projChip,
+      hasProject: !!t.project,
+      failed: !!t.syncFailed,
+      retry: (e) => { e.stopPropagation(); this.retryTask(t.id); },
+      check: t.done ? '✓' : '',
+      boxBg: t.done ? P.green : P.boxBg,
+      boxBorder: t.done ? P.green : P.boxBorder,
+      strike: t.done ? 'line-through' : 'none',
+      nameColor: t.done ? P.doneName : P.ink,
+      opacity: t.done && !t.justDone ? '.6' : '1',
+      dueDisplay: dm.label,
+      dueColor: dm.late > 0 ? P.red : dm.isToday ? P.ink : P.soft,
+      prColor: pr.color, prBg: pr.bg,
+      clientChip: t.personal ? 'Personal' : t.client,
+      clientChipBg: t.personal ? P.lavBg : P.panel,
+      clientChipColor: t.personal ? P.lavText : P.soft,
+      open: () => {
+        if (this._lpFired || this._suppress) { this._lpFired = false; this._suppress = false; return; }
+        const sw = this.state.swipe;
+        if (sw && sw.id === t.id && sw.open) { this.setState({ swipe: null }); return; }
+        this.openTaskSheet(t.id);
+      },
+      push: () => this.openTaskSheet(t.id),
+      toggle: (e) => this.toggleTask(t.id, e),
+      // Swipe right = done, swipe left = pinned actions; long-press = quick-actions sheet
+      swipeDx: (mine ? sw.dx : 0) + 'px',
+      swipeTransition: mine && sw.dragging ? 'none' : 'transform .18s ease',
+      doneRevealOpacity: mine && sw.dx > 0 ? String(Math.min(1, sw.dx / 80)) : '0',
+      swipeSnooze: (e) => { e.stopPropagation(); this.setState({ swipe: null }); this.snoozeToISO(t.id, this.D.TOMORROW, 'Tomorrow'); },
+      swipeMore: (e) => { e.stopPropagation(); this.setState({ swipe: null }); this.push({ type: 'actions', id: t.id }); },
+      pressDown: (e) => this.rowDown(t.id, e),
+      pressMove: (e) => this.rowMove(t.id, e),
+      pressUp: () => this.rowUp(t.id)
+    };
+  }
+
+  enrichEv(ev) {
+    const P = this.P(), D = this.D;
+    const kind = ev.kind || (ev.past ? 'past' : 'plain');
+    const styles = {
+      past: { opacity: '.6', bg: 'var(--card)', rail: 'transparent', timeColor: P.soft, titleColor: P.ink, stripBorder: '1px solid ' + P.line },
+      plain: { opacity: '1', bg: 'var(--card)', rail: 'transparent', timeColor: P.soft, titleColor: P.ink, stripBorder: '1px solid ' + P.line },
+      next: { opacity: '1', bg: P.greenSoft, rail: P.green, timeColor: P.green, titleColor: P.ink, stripBorder: '1.5px solid ' + P.green },
+      placeholder: { opacity: '1', bg: P.creamBg, rail: P.amber, timeColor: P.soft, titleColor: P.soft, stripBorder: '1.5px dashed ' + P.amber }
+    }[kind];
+    const tagStyle = ev.tag === 'UP NEXT' ? { tagBg: 'transparent', tagColor: P.green } : { tagBg: P.cream, tagColor: P.creamText };
+    return {
+      ...ev, ...styles, ...tagStyle,
+      hasTag: !!ev.tag,
+      locLabel: ev.location || 'No room',
+      hasJoin: !!ev.join,
+      joinUrl: D.JOIN_URLS[ev.join] || '#',
+      open: () => { if (this._stMoved) { this._stMoved = false; return; } this.push({ type: 'event', id: ev.id }); }
+    };
+  }
+  findEv(id) {
+    if (!id || !this.D) return null;
+    for (const wk of ['this', 'next']) {
+      for (const d of this.D.CAL[wk]) {
+        const e = d.events.find(x => x.id === id);
+        if (e) return { ...e, dayLabel: d.label };
+      }
+    }
+    return null;
+  }
+
+  drawerSave() {
+    if (this.state.drSync === 'saving') return;
+    this.setState({ drSync: 'saving' });
+    setTimeout(() => {
+      if (this.simFail() && !this._drRetried) {
+        this.setState({ drSync: 'failed' });
+        return;
+      }
+      this._drRetried = false;
+      const d = this.state.dr;
+      this.patchTask(d.id, { name: d.name, priority: d.priority, dueISO: d.dueISO, personal: d.personal, client: d.personal ? '' : d.client, project: d.personal ? '' : d.project, status: d.status, notes: d.notes, done: d.status === 'Done' });
+      this.setState({ drSync: 'saved' });
+      setTimeout(() => { this.pop(); this.setState({ drSync: 'idle' }); }, 650);
+    }, 900);
+  }
+
+  effectiveQa() {
+    const s = this.state, D = this.D;
+    const parsed = D ? D.parseQuickAdd(s.qaName) : { client: '', project: '', dueISO: '', priority: '', detected: [], cleanName: s.qaName };
+    return {
+      parsed,
+      client: s.qaClient || parsed.client,
+      project: s.qaProject || (s.qaClient ? '' : parsed.project),
+      dueISO: s.qaDueISO || parsed.dueISO,
+      priority: s.qaPriority !== 'Soon' ? s.qaPriority : (parsed.priority || 'Soon'),
+      name: parsed.detected.length && parsed.cleanName ? parsed.cleanName : s.qaName
+    };
+  }
+  qaAdd() {
+    const s = this.state, D = this.D;
+    if (!D) return;
+    const eff = this.effectiveQa();
+    if (!eff.name.trim() || (s.qaCategory === 'Work' && !eff.client)) {
+      this.setState({ qaError: true });
+      return;
+    }
+    const prio = eff.priority.toUpperCase();
+    const task = { id: 'n' + Date.now(), name: eff.name.trim(), client: s.qaCategory === 'Work' ? eff.client : '', project: s.qaCategory === 'Work' ? eff.project : '', dueISO: eff.dueISO || '', priority: prio, personal: s.qaCategory === 'Personal', done: false, justDone: false, sort: 99, status: 'Not Started', notes: s.qaNotes };
+    const landsOnToday = D.dueMeta(task.dueISO).isToday || D.dueMeta(task.dueISO).late > 0 || ['ASAP', 'HIGH', 'NOW'].includes(prio);
+    this.setState(st => ({ tasks: [...st.tasks, task], qaName: '', qaProject: '', qaClient: '', qaDueISO: '', qaPriority: 'Soon', qaNotes: '', qaNoteOpen: false, qaError: false, stack: st.stack.slice(0, -1) }));
+    if (this.state.view === 'today' && !landsOnToday) {
+      this.showToast('Added ✓ — it lives in To-do', 'View', () => this.setState({ view: 'todo', filter: 'all' }));
+    } else {
+      this.showToast('Added ✓ — saved to Notion');
+    }
+  }
+
+  guppyReply(text) {
+    const s = this.state;
+    const open = s.tasks.filter(t => !t.done);
+    const od = open.filter(t => this.late(t) > 0).length;
+    const today = open.filter(t => this.isDueToday(t)).length;
+    const lower = text.toLowerCase();
+    if (lower.includes('borax')) return 'Site Rebuild is Active — sitemap revisions are overdue to Dana (Jul 3), and the content model needs sign-off by Jul 9. You have the Borax content workshop at 11:00 today.';
+    if (lower.includes('week') || lower.includes('summar')) return 'This week: ' + od + ' overdue, ' + today + ' due today, ' + open.length + ' open tasks across 8 projects. Rates API is your only At Risk project — the vendor sandbox escalation is the big one.';
+    if (lower.includes('note')) return 'Paste your meeting notes here and I\u2019ll draft tasks with clients and due dates for you to confirm — nothing is saved until you approve each one.';
+    return 'You\u2019ve got ' + od + ' overdue and ' + today + ' due today. Biggest risk on the radar: Rates API (vendor sandbox down 8 days). Want the full rundown of any project?';
+  }
+  guppySend(text) {
+    const msg = (text != null ? text : this.state.guppyInput).trim();
+    if (!msg) return;
+    this.setState(s => ({ guppyMsgs: [...s.guppyMsgs, { mine: true, text: msg }], guppyInput: '' }));
+    setTimeout(() => this.setState(s => ({ guppyMsgs: [...s.guppyMsgs, { mine: false, text: this.guppyReply(msg) }] })), 700);
+  }
+
+  pill(list, cur, apply) {
+    const P = this.P();
+    return list.map(l => {
+      const active = l === cur;
+      return {
+        label: l,
+        color: active ? '#fff' : P.soft,
+        bg: active ? P.green : 'var(--card)',
+        border: active ? P.green : 'var(--line2)',
+        pick: () => apply(l)
+      };
+    });
+  }
+
+  renderVals() {
+    const s = this.state, D = this.D;
+    if (!s.ready || !D) return { isToday: true, hasToast: false, navItems: [], todayGroups: [], radarTop: [], radarRest: [], reorderList: [], reorderOff: true, reorderMode: false, outageVisible: false, projects: [], stripEvents: [], calDays: [], filterChips: [], todoGroupsList: [], swallow: (e) => e.stopPropagation(), screenTitle: 'Today', screenSub: '' };
+    const P = this.P();
+
+    const open = s.tasks.filter(t => !t.done);
+    const overdue = s.tasks.filter(t => this.visible(t) && this.late(t) > 0);
+    const dueToday = s.tasks.filter(t => this.visible(t) && this.late(t) === 0 && this.isDueToday(t));
+    const high = s.tasks.filter(t => this.visible(t) && this.late(t) === 0 && !this.isDueToday(t) && ['ASAP', 'HIGH', 'NOW'].includes(t.priority));
+    const attention = overdue.length + dueToday.length + high.length;
+    const odCount = open.filter(t => this.late(t) > 0).length;
+    const tdCount = open.filter(t => this.isDueToday(t)).length;
+
+    const todayGroups = [
+      { label: 'Overdue', labelColor: P.red, border: 'var(--red)', raw: overdue },
+      { label: 'Due today', labelColor: 'var(--ink)', border: 'var(--line)', raw: dueToday },
+      { label: 'High priority', labelColor: 'var(--ink)', border: 'var(--line)', raw: high }
+    ].filter(g => g.raw.length).map(g => ({ ...g, count: g.raw.filter(t => !t.done).length, tasks: g.raw.map(t => this.enrich(t)) }));
+
+    const titles = { today: 'Today', todo: 'To-do', projects: 'Projects', calendar: 'Calendar' };
+    const subs = {
+      today: 'Wed, July 8 · ' + odCount + ' overdue, ' + tdCount + ' due · synced ' + s.syncedAgo + 'm ago',
+      todo: open.length + ' open tasks · synced ' + s.syncedAgo + 'm ago',
+      projects: s.projects.length + ' non-complete · edit in Notion',
+      calendar: 'Read-only · synced from Google'
+    };
+
+    const navDefs = [
+      { label: 'Today', view: 'today', count: String(attention) },
+      { label: 'To-do', view: 'todo', count: String(open.length) },
+      { label: 'Projects', view: 'projects', count: String(s.projects.length) },
+      { label: 'Calendar', view: 'calendar', count: '' }
+    ];
+    const navItems = navDefs.map(n => ({
+      ...n,
+      dash: s.view === n.view ? P.green : 'transparent',
+      color: s.view === n.view ? P.green : P.soft,
+      weight: s.view === n.view ? '800' : '600',
+      go: () => this.setState({ view: n.view })
+    }));
+
+    const filterDefs = [
+      { key: 'all', label: 'All Active · ' + open.length },
+      { key: 'today', label: 'Today · ' + tdCount },
+      { key: 'overdue', label: 'Overdue · ' + odCount },
+      { key: 'work', label: 'Work · ' + open.filter(t => !t.personal).length },
+      { key: 'personal', label: 'Personal · ' + open.filter(t => t.personal).length }
+    ];
+    const filterChips = filterDefs.map(f => ({
+      label: f.label,
+      go: () => this.setState({ filter: f.key }),
+      bg: s.filter === f.key ? 'var(--ink)' : 'var(--card)',
+      color: s.filter === f.key ? 'var(--paper)' : f.key === 'overdue' ? P.red : P.soft,
+      border: s.filter === f.key ? 'var(--ink)' : 'var(--line)',
+      weight: s.filter === f.key ? '700' : '600'
+    }));
+    const prRank = t => (P.PR[t.priority] || P.PR.SOON).rank;
+    const bucket = t => this.late(t) > 0 ? 0 : this.isDueToday(t) ? 1 : 2;
+    let filtered = s.tasks.filter(t => !t.done);
+    if (s.filter === 'today') filtered = filtered.filter(t => this.isDueToday(t));
+    if (s.filter === 'overdue') filtered = filtered.filter(t => this.late(t) > 0);
+    if (s.filter === 'work') filtered = filtered.filter(t => !t.personal);
+    if (s.filter === 'personal') filtered = filtered.filter(t => t.personal);
+    filtered = filtered.slice().sort((a, b) => bucket(a) - bucket(b) || prRank(a) - prRank(b) || a.sort - b.sort);
+    const gDefs = [
+      { b: 0, label: 'OVERDUE', labelColor: P.red },
+      { b: 1, label: 'DUE TODAY', labelColor: 'var(--muted)' },
+      { b: 2, label: 'UPCOMING', labelColor: 'var(--muted)' }
+    ];
+    const todoGroupsList = gDefs.map(g => {
+      const raw = filtered.filter(t => bucket(t) === g.b);
+      return { ...g, count: raw.length, tasks: raw.map(t => this.enrich(t)) };
+    }).filter(g => g.count);
+    const completedRaw = s.tasks.filter(t => t.done);
+    if (s.showCompleted && completedRaw.length) {
+      todoGroupsList.push({ label: 'COMPLETED', labelColor: 'var(--muted)', count: completedRaw.length, tasks: completedRaw.map(t => this.enrich(t)) });
+    }
+    const emptyLines = { personal: 'No personal tasks — nice.', overdue: 'Nothing overdue. Clean slate.', today: 'Nothing due today.', work: 'No open work tasks.', all: 'Nothing open. Enjoy it.' };
+
+    const byId = {}; s.projects.forEach(p => { byId[p.id] = p; });
+    const orderedRaw = s.radarOrder.map(id => byId[id]).filter(Boolean);
+    const projects = orderedRaw.map(p => {
+      const st = P.STATUS[p.status];
+      const rel = s.tasks.filter(t => t.project === p.name && !t.done);
+      const chips = [];
+      const od = rel.filter(t => this.late(t) > 0).length;
+      const td = rel.filter(t => this.isDueToday(t)).length;
+      if (od) chips.push({ text: od + ' overdue', bg: P.redSoft, color: P.red });
+      if (td) chips.push({ text: td + ' due today', bg: P.cream, color: P.creamText });
+      if (D.isStale(p)) chips.push({ text: 'Stale · ' + D.staleDays(p) + 'd', bg: P.cream, color: P.creamText });
+      chips.push(rel.length ? { text: rel.length + ' open', bg: P.panel, color: P.soft } : { text: 'No open tasks', bg: P.panel, color: P.soft });
+      return {
+        ...p,
+        rail: st.rail, badgeBg: st.bg, badgeColor: st.color, statusWord: st.word,
+        opacity: p.status === 'On Hold' ? '.8' : '1',
+        concerns: p.concerns.map(c => ({ ...c, dot: D.concernDot(c.tone, P) })),
+        chips,
+        topConcern: p.concerns[0] ? p.concerns[0].text : '',
+        expand: () => this.push({ type: 'project', id: p.id })
+      };
+    });
+    // A2: 3 full cards + all remaining as slim rows — nothing hidden
+    const radarTop = projects.slice(0, 3);
+    const radarRest = projects.slice(3);
+    const reorderList = projects.map(p => {
+      const dragging = s.dragId === p.id;
+      return {
+        name: p.name, rail: p.rail, badgeBg: p.badgeBg, badgeColor: p.badgeColor, statusWord: p.statusWord,
+        dragDy: (dragging ? s.dragDy : 0) + 'px',
+        dragTransition: dragging ? 'none' : 'transform .15s ease',
+        dragShadow: dragging ? '0 6px 18px var(--shadow-deep)' : 'none',
+        dragZ: dragging ? '5' : '1',
+        handleDown: (e) => this.startReorderDrag(p.id, e)
+      };
+    });
+    const outage = this.props.simulateOutage ?? 'None';
+
+    // sheet stack
+    const topSheet = this.top();
+    const below = s.stack.length > 1 ? s.stack[s.stack.length - 2] : null;
+    const d = s.dr || {};
+    const drCat = d.personal ? 'Personal' : 'Work';
+    const setDr = patch => this.setState({ dr: { ...this.state.dr, ...patch } });
+
+    const expItem = topSheet && topSheet.type === 'project' ? topSheet : null;
+    const exp = expItem ? s.projects.find(p => p.id === expItem.id) : null;
+    const expSt = exp ? P.STATUS[exp.status] : null;
+    const expTasks = exp ? s.tasks.filter(t => t.project === exp.name && (!t.done || t.justDone)).map(t => this.enrich(t)) : [];
+
+    const evItem = topSheet && topSheet.type === 'event' ? topSheet : null;
+    const evSel = evItem ? this.findEv(evItem.id) : null;
+
+    const actItem = topSheet && topSheet.type === 'actions' ? topSheet : null;
+    const actTask = actItem ? s.tasks.find(t => t.id === actItem.id) : null;
+
+    const eff = this.effectiveQa();
+    const qaProjects = eff.client ? (D.CLIENTS[eff.client] || []) : [];
+
+    const guppyMsgs = (s.guppyMsgs.length ? s.guppyMsgs : [{ mine: false, text: 'Morning! Ask me about any client, project, or what\u2019s on your plate — or paste meeting notes and I\u2019ll draft tasks for you to approve.' }]).map(m => ({
+      text: m.text,
+      align: m.mine ? 'flex-end' : 'flex-start',
+      bg: m.mine ? P.green : 'var(--card)',
+      color: m.mine ? '#fff' : P.ink,
+      radius: m.mine ? '12px 12px 3px 12px' : '12px 12px 12px 3px',
+      border: m.mine ? 'none' : '1px solid var(--line)'
+    }));
+
+    // F2 / E2: computed now/next
+    const todayEvents = D.CAL['this'].find(x => x.isToday).events;
+    const current = todayEvents.find(ev => ev.startMin <= D.NOW_MIN && (ev.endMin || ev.startMin + 30) > D.NOW_MIN);
+    const next = todayEvents.find(ev => ev.startMin > D.NOW_MIN);
+    const minLabel = m => { const h = Math.floor(m / 60), mm = m % 60; const h12 = ((h + 11) % 12) + 1; return h12 + (mm ? ':' + String(mm).padStart(2, '0') : ':00'); };
+    let nowTitle = 'No meetings right now', nowSub = next ? 'next at ' + minLabel(next.startMin) : 'clear day';
+    if (current) { nowTitle = current.title; nowSub = 'until ' + minLabel(current.endMin || current.startMin + 30); }
+    else if (next) { nowTitle = next.title; nowSub = 'in ' + (next.startMin - D.NOW_MIN) + ' min' + (next.location ? ' · ' + next.location : ''); }
+
+    const toast = s.toast;
+    const drDm = D.dueMeta(d.dueISO);
+    const dueChoices = [
+      { label: 'Today', iso: D.TODAY_ISO }, { label: 'Tomorrow', iso: D.TOMORROW }, { label: 'Next Mon', iso: D.NEXT_MON }, { label: 'None', iso: '' }
+    ];
+
+    return {
+      // shell
+      screenTitle: titles[s.view], screenSub: subs[s.view],
+      navItems,
+      isToday: s.view === 'today', isTodo: s.view === 'todo', isProjects: s.view === 'projects', isCalendar: s.view === 'calendar',
+      goCalendar: () => this.setState({ view: 'calendar' }),
+      goProjects: () => this.setState({ view: 'projects' }),
+      swallow: (e) => e.stopPropagation(),
+      refresh: () => { this.setState({ syncedAgo: 0 }); this.showToast('Refreshed from Notion ✓'); },
+      toggleTheme: () => this.setTheme(s.theme === 'dark' ? 'light' : 'dark'),
+      themeIcon: s.theme === 'dark' ? '☀' : '☾',
+      notionUrl: D.NOTION_URL,
+      nowTitle, nowSub,
+
+      // today
+      todayGroups,
+      stripEvents: todayEvents.map(ev => this.enrichEv(ev)),
+      stripNextLabel: next ? 'next ' + minLabel(next.startMin) : '',
+      stripDown: (e) => { const el = e.currentTarget; this._stEl = el; this._stX = e.clientX; this._stL = el.scrollLeft; this._stMoved = false; try { el.setPointerCapture(e.pointerId); } catch (err) {} },
+      stripMove: (e) => { if (!this._stEl) return; const dx = e.clientX - this._stX; if (Math.abs(dx) > 6) this._stMoved = true; this._stEl.scrollLeft = this._stL - dx; },
+      stripUp: () => { this._stEl = null; },
+      radarTop, radarRest, projectCount: s.projects.length,
+      reorderMode: s.reorderMode, reorderOff: !s.reorderMode,
+      reorderList,
+      reorderToggle: () => this.setState(st => ({ reorderMode: !st.reorderMode })),
+      reorderLabel: s.reorderMode ? 'Done' : 'Reorder',
+      reorderColor: s.reorderMode ? P.green : 'var(--muted)',
+      outageVisible: outage !== 'None',
+      outageTitle: outage === 'Notion' ? "Can't reach Notion" : "Can't reach Google Calendar",
+      outageSub: outage === 'Notion' ? 'Showing data from ' + s.syncedAgo + 'm ago — edits queue & retry.' : 'Events may be out of date — retrying.',
+      outageRetry: () => this.showToast('Still unreachable — retrying automatically'),
+
+      // todo
+      filterChips, todoGroupsList,
+      toggleCompleted: () => this.setState(st => ({ showCompleted: !st.showCompleted })),
+      completedLabel: s.showCompleted ? 'Hide completed' : 'Completed · ' + completedRaw.length,
+      completedColor: s.showCompleted ? P.green : 'var(--muted)',
+      todoEmpty: todoGroupsList.length === 0,
+      todoEmptyLine: emptyLines[s.filter] || emptyLines.all,
+
+      // projects
+      projects,
+
+      // calendar
+      calSetThis: () => this.setState({ calWeek: 'this' }),
+      calSetNext: () => this.setState({ calWeek: 'next' }),
+      calThisBg: s.calWeek === 'this' ? 'var(--card)' : 'transparent',
+      calThisColor: s.calWeek === 'this' ? 'var(--ink)' : 'var(--faint)',
+      calThisShadow: s.calWeek === 'this' ? '0 1px 2px rgba(0,0,0,.08)' : 'none',
+      calNextBg: s.calWeek === 'next' ? 'var(--card)' : 'transparent',
+      calNextColor: s.calWeek === 'next' ? 'var(--ink)' : 'var(--faint)',
+      calNextShadow: s.calWeek === 'next' ? '0 1px 2px rgba(0,0,0,.08)' : 'none',
+      calDays: D.CAL[s.calWeek].map(day => ({ label: day.label, labelColor: day.isToday ? P.green : 'var(--ink)', isToday: !!day.isToday, empty: day.events.length === 0, events: day.events.map(ev => this.enrichEv(ev)) })),
+
+      // sheet stack
+      sheetOpen: s.stack.length > 0,
+      sheetHasBack: s.stack.length > 1,
+      sheetBackLabel: this.sheetLabel(below),
+      sheetTitle: this.sheetLabel(topSheet),
+      popSheet: () => this.pop(),
+      closeSheets: () => this.closeAll(),
+      shTask: !!(topSheet && topSheet.type === 'task' && s.dr),
+      shActions: !!actTask,
+      shProject: !!exp,
+      shEvent: !!evSel,
+      shQa: !!(topSheet && topSheet.type === 'qa'),
+      shGuppy: !!(topSheet && topSheet.type === 'guppy'),
+      openQa: () => this.push({ type: 'qa' }),
+      openGuppy: () => this.push({ type: 'guppy' }),
+
+      // A5 quick actions
+      actTaskName: actTask ? actTask.name : '',
+      actDoneLabel: actTask && actTask.done ? 'Mark not done' : 'Mark done',
+      actDone: () => { this.toggleTask(actTask.id); this.pop(); },
+      actSnoozeOpts: [
+        { label: 'Tomorrow', iso: D.TOMORROW }, { label: 'Next Mon', iso: D.NEXT_MON }, { label: 'Next week', iso: D.NEXT_WEEK }
+      ].map(o => ({ label: o.label, pick: () => { this.snoozeToISO(actTask.id, o.iso, o.label); this.pop(); } })),
+      actSnoozeDate: (e) => { const v = e.target.value; if (v) { this.snoozeToISO(actTask.id, v, D.fmtShort(v)); this.pop(); } },
+      actNote: () => { this.openTaskSheet(actTask.id, true); setTimeout(() => { const el = document.querySelector('[data-cc-notes]'); if (el) el.focus(); }, 250); },
+      actEdit: () => this.openTaskSheet(actTask.id, true),
+
+      // task editor
+      drName: d.name || '', onDrName: (e) => setDr({ name: e.target.value }),
+      drIsWork: !d.personal,
+      drStatusOpts: this.pill(['Not Started', 'In Progress', 'Waiting', 'Done', 'Cancelled'], d.status, l => setDr({ status: l })),
+      drPriorityOpts: this.pill(['ASAP', 'High', 'Now', 'Soon', 'Someday'], this.titleCase(d.priority || ''), l => setDr({ priority: l.toUpperCase() })),
+      drDueOpts: dueChoices.map(o => {
+        const active = (d.dueISO || '') === o.iso;
+        return { label: o.label, color: active ? '#fff' : P.soft, bg: active ? P.green : 'var(--card)', border: active ? P.green : 'var(--line2)', pick: () => setDr({ dueISO: o.iso }) };
+      }),
+      drCustomDue: d.dueISO && !dueChoices.some(o => o.iso === d.dueISO) ? d.dueISO : '',
+      drDuePick: (e) => { const v = e.target.value; if (v) setDr({ dueISO: v }); },
+      drCategoryOpts: this.pill(['Work', 'Personal'], drCat, l => setDr({ personal: l === 'Personal' })),
+      drClientOpts: this.pill(Object.keys(D.CLIENTS), d.client, l => setDr({ client: l, project: '' })),
+      drProjectOpts: this.pill(['None', ...(D.CLIENTS[d.client] || [])], d.project || 'None', l => setDr({ project: l === 'None' ? '' : l })),
+      drNotes: d.notes || '', onDrNotes: (e) => setDr({ notes: e.target.value }),
+      drawerSave: () => this.drawerSave(),
+      drSaveLabel: s.drSync === 'saving' ? 'Saving…' : s.drSync === 'saved' ? 'Saved ✓' : 'Save',
+      drSyncDot: s.drSync === 'saving' ? P.amber : s.drSync === 'saved' ? P.green : s.drSync === 'failed' ? P.red : P.boxBorder,
+      drSyncLabel: s.drSync === 'saving' ? 'Saving to Notion…' : s.drSync === 'saved' ? 'Saved to Notion ✓' : s.drSync === 'failed' ? 'Save failed — nothing written.' : 'Saves to Notion',
+      drFailed: s.drSync === 'failed',
+      drRetry: () => { this._drRetried = true; this.drawerSave(); },
+      drRevert: () => this.setState({ dr: { ...s.drOrig }, drSync: 'idle' }),
+
+      // project sheet
+      expBadgeBg: expSt ? expSt.bg : 'var(--card)', expBadgeColor: expSt ? expSt.color : '#000', expStatusWord: expSt ? expSt.word : '',
+      expClient: exp ? exp.client : '',
+      expConcerns: exp ? exp.concerns.map(c => ({ ...c, dot: D.concernDot(c.tone, P) })) : [],
+      expStatusText: exp ? exp.statusText : '',
+      expCadence: exp ? exp.cadence : '',
+      expLast: exp ? D.fmtShort(exp.lastISO) + (D.isStale(exp) ? ' · stale' : '') : '',
+      expLastColor: exp && D.isStale(exp) ? P.creamText : 'var(--ink)',
+      expNext: exp ? D.fmtShort(exp.nextISO) + (D.nextDueNow(exp) ? ' (today)' : '') : '',
+      expNextColor: exp && (D.nextLate(exp) || D.nextDueNow(exp)) ? P.red : 'var(--ink)',
+      expTasks, expTaskCount: expTasks.length, expNoTasks: expTasks.length === 0,
+      expAddTask: () => { const p = exp; this.setState({ stack: [{ type: 'qa' }], qaCategory: 'Work', qaClient: p.client, qaProject: p.name }); },
+
+      // event sheet
+      evDay: evSel ? evSel.dayLabel : '', evTime: evSel ? evSel.time : '',
+      evHasTag: !!(evSel && evSel.tag),
+      evTag: evSel ? evSel.tag || '' : '',
+      evTagBg: evSel && evSel.tag === 'UP NEXT' ? 'transparent' : P.cream,
+      evTagColor: evSel && evSel.tag === 'UP NEXT' ? P.green : P.creamText,
+      evLocation: evSel ? (evSel.location || 'None — blocked time') : '',
+      evLinked: evSel ? (evSel.project ? evSel.client + ' · ' + evSel.project : (evSel.client || 'Internal')) : '',
+      evHasJoin: !!(evSel && evSel.join && !evSel.past),
+      evJoin: evSel ? evSel.join : '',
+      evJoinUrl: evSel && evSel.join ? D.JOIN_URLS[evSel.join] : '#',
+      evAttendees: evSel ? evSel.attendees.map(n => ({ name: n })) : [],
+      evAttendeeCount: evSel ? evSel.attendees.length : 0,
+      evAgenda: evSel ? evSel.agenda : '',
+      evHasProject: !!(evSel && evSel.project),
+      evProject: evSel ? evSel.project : '',
+      evOpenProject: () => { const p = s.projects.find(x => x.name === evSel.project); if (p) this.push({ type: 'project', id: p.id }); },
+      evAddTask: () => this.setState({ stack: [{ type: 'qa' }], qaCategory: 'Work', qaClient: evSel.client || '', qaProject: evSel.project || '' }),
+
+      // quick add
+      qaName: s.qaName, onQaName: (e) => this.setState({ qaName: e.target.value, qaError: false }),
+      qaBorder: s.qaError && !eff.name.trim() ? 'var(--red)' : 'var(--line2)',
+      qaIsWork: s.qaCategory === 'Work',
+      qaWorkBg: s.qaCategory === 'Work' ? 'var(--card)' : 'transparent', qaWorkColor: s.qaCategory === 'Work' ? 'var(--ink)' : 'var(--faint)', qaWorkShadow: s.qaCategory === 'Work' ? '0 1px 2px rgba(0,0,0,.08)' : 'none',
+      qaPersonalBg: s.qaCategory === 'Personal' ? P.lavBg : 'transparent', qaPersonalColor: s.qaCategory === 'Personal' ? P.lavText : 'var(--faint)', qaPersonalShadow: s.qaCategory === 'Personal' ? '0 1px 2px rgba(0,0,0,.08)' : 'none',
+      qaSetWork: () => this.setState({ qaCategory: 'Work' }),
+      qaSetPersonal: () => this.setState({ qaCategory: 'Personal' }),
+      qaClientOpts: this.pill(Object.keys(D.CLIENTS), eff.client, l => this.setState({ qaClient: l, qaProject: '', qaError: false })),
+      qaHasProjects: qaProjects.length > 0,
+      qaProjectOpts: this.pill(qaProjects, eff.project, l => this.setState({ qaProject: l })),
+      qaDueOpts: [
+        { label: 'Today', iso: D.TODAY_ISO }, { label: 'Tomorrow', iso: D.TOMORROW }, { label: 'Next Mon', iso: D.NEXT_MON }
+      ].map(o => {
+        const active = eff.dueISO === o.iso;
+        return { label: o.label, color: active ? '#fff' : P.soft, bg: active ? P.green : 'var(--card)', border: active ? P.green : 'var(--line2)', pick: () => this.setState({ qaDueISO: s.qaDueISO === o.iso ? '' : o.iso }) };
+      }),
+      qaCustomDue: s.qaDueISO && ![D.TODAY_ISO, D.TOMORROW, D.NEXT_MON].includes(s.qaDueISO) ? s.qaDueISO : '',
+      onQaCustomDue: (e) => this.setState({ qaDueISO: e.target.value || '' }),
+      qaPriorityOpts: this.pill(['ASAP', 'High', 'Now', 'Soon', 'Someday'], eff.priority, l => this.setState({ qaPriority: l })),
+      qaNoteOpen: s.qaNoteOpen, qaNotes: s.qaNotes,
+      onQaNotes: (e) => this.setState({ qaNotes: e.target.value }),
+      qaToggleNote: () => this.setState(st => ({ qaNoteOpen: !st.qaNoteOpen })),
+      qaNoteToggleLabel: s.qaNoteOpen ? '– Hide note' : '+ Add note',
+      qaParsedVisible: eff.parsed.detected.length > 0,
+      qaParsedChips: eff.parsed.detected.map(x => ({ label: x })),
+      qaAdd: () => this.qaAdd(),
+      qaHint: s.qaError ? (eff.name.trim() ? 'Pick a client — required for Work tasks.' : 'Give it a name first.') : 'Status starts as Not Started · saves to Notion',
+      qaHintColor: s.qaError ? P.red : 'var(--muted)',
+
+      // guppy
+      guppyMsgs, guppyInput: s.guppyInput,
+      onGuppyInput: (e) => this.setState({ guppyInput: e.target.value }),
+      guppyKeyDown: (e) => { if (e.key === 'Enter') this.guppySend(); },
+      guppySend: () => this.guppySend(),
+      guppyChips: [
+        { label: 'What do I have on Borax?', pick: () => this.guppySend('What do I have on Borax?') },
+        { label: 'Summarize my week', pick: () => this.guppySend('Summarize my week') },
+        { label: 'Turn meeting notes into tasks', pick: () => this.guppySend('Turn my meeting notes into tasks') }
+      ],
+
+      // toast
+      hasToast: !!toast, toast: toast ? toast.msg : '',
+      toastHasAction: !!(toast && toast.actionLabel),
+      toastActionLabel: toast ? toast.actionLabel : '',
+      toastAction: () => { if (toast && toast.action) toast.action(); this.setState({ toast: null }); }
+    };
+  }
+
+  titleCase(x) { return x ? x.charAt(0) + x.slice(1).toLowerCase() : x; }
+}
+</script>
+</body>
+</html>

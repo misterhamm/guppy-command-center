@@ -41,7 +41,7 @@ export default function Sheets() {
     if (item.type === 'actions') return 'Quick actions';
     if (item.type === 'qa') return 'Add task';
     if (item.type === 'guppy') return 'Guppy';
-    if (item.type === 'event') { const e = findEvent(calendar, item.id); return e ? e.title.replace(/^placeholder:\s*/i, '') : 'Event'; }
+    if (item.type === 'event') { const e = findEvent(calendar, item.id); return e ? e.title.replace(/^\s*\[?placeholder\]?\s*[:\-]?\s*/i, '') : 'Event'; }
     if (item.type === 'project') { const p = projects.find(x => x.id === item.id); return p ? p.name : 'Project'; }
     return '';
   };

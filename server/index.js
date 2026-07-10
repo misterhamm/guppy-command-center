@@ -1,4 +1,9 @@
-import 'dotenv/config';
+import { config as dotenv } from 'dotenv';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+// Load .env from the server directory regardless of the process cwd
+dotenv({ path: path.join(path.dirname(fileURLToPath(import.meta.url)), '.env') });
+
 import express from 'express';
 import { buildTasks, buildProjects, buildCalendar } from './mockData.js';
 import * as notion from './sources/notion.js';

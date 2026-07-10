@@ -59,7 +59,8 @@ function normalizeEvent(ev) {
   const start = new Date(ev.start.dateTime);
   const end = new Date(ev.end.dateTime);
   const title = ev.summary || '(no title)';
-  const tag = /^placeholder:/i.test(title) ? 'PLACEHOLDER' : undefined;
+  // Both "Placeholder: x" and "[Placeholder] x" styles get the treatment
+  const tag = /^\s*\[?placeholder\b/i.test(title) ? 'PLACEHOLDER' : undefined;
   const attendees = (ev.attendees || [])
     .filter(a => !a.resource)
     .map(a => a.displayName || a.email)

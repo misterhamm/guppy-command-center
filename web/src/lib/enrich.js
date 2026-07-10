@@ -49,7 +49,7 @@ export function projectView(p, tasks, P, todayISO) {
 // upcoming today) > plain. `isNext` is decided by the caller since it needs the
 // whole day's events.
 export function eventKind(ev, dayISO, todayISO, nowMin, isNext) {
-  const placeholder = !!ev.tag || /^placeholder:/i.test(ev.title || '');
+  const placeholder = !!ev.tag || /^\s*\[?placeholder\b/i.test(ev.title || '');
   const past = dayISO < todayISO || (dayISO === todayISO && (ev.endMin || ev.startMin + 30) <= nowMin);
   if (placeholder) return 'placeholder';
   if (past) return 'past';
@@ -70,7 +70,7 @@ export function eventView(ev, kind, P) {
     ...styles, ...tagStyle,
     tag, hasTag: !!tag,
     past: kind === 'past',
-    displayTitle: kind === 'placeholder' ? (ev.title || '').replace(/^placeholder:\s*/i, '') : ev.title,
+    displayTitle: kind === 'placeholder' ? (ev.title || '').replace(/^\s*\[?placeholder\]?\s*[:\-]?\s*/i, '') : ev.title,
     time: timeRange(ev.startMin, ev.endMin),
     locLabel: ev.location || 'No room',
     hasJoin: !!ev.join && kind !== 'past',

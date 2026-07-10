@@ -39,7 +39,8 @@ export function StoreProvider({ children }) {
   const [syncedAt, setSyncedAt] = useState(null);
   const [outage, setOutage] = useState(null); // 'notion' | 'gcal' | null
   const [toast, setToast] = useState(null);
-  const [logos, setLogos] = useState({});
+  // { clients: {name: url}, projects: {projectId: url} } — project wins
+  const [logos, setLogos] = useState({ clients: {}, projects: {} });
   const [qa, setQa] = useState(EMPTY_QA);
   const [guppyMsgs, setGuppyMsgs] = useState([]);
   const [guppyBusy, setGuppyBusy] = useState(false);
@@ -187,16 +188,19 @@ export function StoreProvider({ children }) {
     }
   }, []);
 
-  const uploadLogo = useCallback(async (clientName, file) => {
+  const uploadLogo = useCallback(async (projectId, file) => {
     const dataUrl = await new Promise((resolve, reject) => {
       const r = new FileReader();
       r.onload = () => resolve(r.result);
       r.onerror = reject;
       r.readAsDataURL(file);
     });
-    const res = await api.uploadLogo(clientName, dataUrl);
-    setLogos(s => ({ ...s, [clientName]: res.url }));
+    const res = await api.uploadLogo(projectId, dataUrl);
+    setLogos(s => ({ ...s, projects: { ...s.projects, [projectId]: res.url } }));
   }, []);
+
+  // Project logo wins over the client's company icon
+  const logoFor = useCallback(p => logos.projects[p.id] || logos.clients[p.client] || '', [logos]);
 
   // ---- quick add ----
   const clients = useMemo(() => clientsMap(projects, tasks), [projects, tasks]);
@@ -318,7 +322,7 @@ export function StoreProvider({ children }) {
     syncedAgo, outage, refresh,
     toast, showToast, dismissToast,
     toggleTask, retryTask, snoozeTask, saveTask,
-    saveProject, uploadLogo, logos,
+    saveProject, uploadLogo, logos, logoFor,
     qa, qaSet, qaReset, qaPrefill, qaAdd, effectiveQa,
     radarOrder, moveProjectTo, moveProjectBy, persistOrder,
     guppyMsgs, guppySend, guppyBusy,

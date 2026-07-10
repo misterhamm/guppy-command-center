@@ -19,7 +19,7 @@ function Kicker({ children, mt = 0 }) {
 
 export default function Sheets() {
   const store = useStore();
-  const { P, tasks, projects, calendar, clients, todayISO, nowMin, tomorrowISO, nextMonISO, nextWeekISO, toggleTask, snoozeTask, saveTask, saveProject, uploadLogo, logos, showToast, qa, qaSet, qaAdd, qaPrefill, effectiveQa, guppyMsgs, guppySend, guppyBusy } = store;
+  const { P, tasks, projects, calendar, clients, todayISO, nowMin, tomorrowISO, nextMonISO, nextWeekISO, toggleTask, snoozeTask, saveTask, saveProject, uploadLogo, logos, logoFor, showToast, qa, qaSet, qaAdd, qaPrefill, effectiveQa, guppyMsgs, guppySend, guppyBusy } = store;
   const { stack, push, pop, closeAll, dr, setDr, drSync, setDrSync, openTaskSheet } = useMob();
 
   const [guppyInput, setGuppyInput] = useState('');
@@ -150,7 +150,8 @@ export default function Sheets() {
     const st = P.STATUS[p.status] || P.STATUS.Active;
     const rel = tasks.filter(t => t.project === p.name && (!t.done || t.justDone));
     const stale = isStale(p, todayISO);
-    const logo = logos[p.client];
+    const logo = logoFor(p);
+    const projectLogo = logos.projects[p.id];
     const editingThis = projDraft && projDraft.id === p.id;
     const saveProj = async () => {
       if (projSync === 'saving') return;
@@ -167,7 +168,7 @@ export default function Sheets() {
     const pickLogo = async e => {
       const file = e.target.files && e.target.files[0];
       if (!file) return;
-      try { await uploadLogo(p.client, file); showToast('Logo saved for ' + p.client); }
+      try { await uploadLogo(p.id, file); showToast('Project logo saved to Notion ✓'); }
       catch (err) { showToast("Couldn't save the logo"); }
       e.target.value = '';
     };
@@ -186,13 +187,13 @@ export default function Sheets() {
           <textarea value={projDraft.concernsText} onChange={e => setProjDraft(d => ({ ...d, concernsText: e.target.value }))} style={{ width: '100%', border: '1px solid var(--line2)', borderRadius: 9, padding: '10px 12px', fontSize: 13, color: 'var(--ink)', minHeight: 80, marginBottom: 14, lineHeight: 1.5, resize: 'vertical', outlineColor: 'var(--green)', background: 'var(--card-alt)' }} />
           <Kicker>CURRENT STATUS</Kicker>
           <textarea value={projDraft.statusText} onChange={e => setProjDraft(d => ({ ...d, statusText: e.target.value }))} style={{ width: '100%', border: '1px solid var(--line2)', borderRadius: 9, padding: '10px 12px', fontSize: 13, color: 'var(--ink)', minHeight: 64, marginBottom: 14, lineHeight: 1.5, resize: 'vertical', outlineColor: 'var(--green)', background: 'var(--card-alt)' }} />
-          <Kicker>COMPANY LOGO</Kicker>
+          <Kicker>PROJECT LOGO</Kicker>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
             <div style={{ width: 38, height: 38, borderRadius: 9, border: '1px solid var(--line2)', background: 'var(--card-alt)', display: 'grid', placeItems: 'center', overflow: 'hidden', flex: 'none' }}>
               {logo ? <img src={logo} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : <span style={{ fontSize: 15, color: 'var(--faint)', fontWeight: 800 }}>{(p.client || '?')[0]}</span>}
             </div>
-            <span onClick={() => logoRef.current && logoRef.current.click()} tabIndex={0} style={{ fontSize: 13, fontWeight: 700, color: 'var(--soft)', border: '1px solid var(--line2)', borderRadius: 9, padding: '9px 14px', cursor: 'pointer', background: 'var(--card)' }}>{logo ? 'Replace logo' : 'Upload logo'}</span>
-            <span style={{ fontSize: 11, color: 'var(--muted)' }}>Shared across {p.client}</span>
+            <span onClick={() => logoRef.current && logoRef.current.click()} tabIndex={0} style={{ fontSize: 13, fontWeight: 700, color: 'var(--soft)', border: '1px solid var(--line2)', borderRadius: 9, padding: '9px 14px', cursor: 'pointer', background: 'var(--card)' }}>{projectLogo ? 'Replace logo' : 'Upload logo'}</span>
+            <span style={{ fontSize: 11, color: 'var(--muted)' }}>{projectLogo ? 'Saved on this project' : 'Falls back to company icon'}</span>
             <input ref={logoRef} type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp,image/gif" onChange={pickLogo} style={{ display: 'none' }} />
           </div>
           {projSync === 'failed' && (

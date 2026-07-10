@@ -23,6 +23,6 @@ export const api = {
   patchProject: (id, patch) => req('PATCH', '/projects/' + encodeURIComponent(id), patch),
   getCalendar: () => req('GET', '/calendar'),
   getLogos: () => req('GET', '/logos'),
-  uploadLogo: (client, dataUrl) => req('POST', '/logos', { client, dataUrl }),
+  uploadLogo: (projectId, dataUrl) => req('POST', '/logos', { projectId, dataUrl }),
   guppyChat: (messages) => req('POST', '/guppy/chat', { messages })
 };

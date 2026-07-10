@@ -78,9 +78,13 @@ app.patch('/api/tasks/:id', async (req, res) => {
   res.json({ task: t, source: 'mock' });
 });
 
+// The internal `logo` field carries an expiring signed URL — never send it to
+// the browser; the logos route serves cached bytes instead.
+const stripLogo = p => { const { logo, ...rest } = p; return rest; };
+
 app.get('/api/projects', async (_req, res) => {
   if (notion.configured()) {
-    try { return res.json({ projects: await cached('projects', () => notion.getProjects()), source: 'notion' }); }
+    try { return res.json({ projects: (await cached('projects', () => notion.getProjects())).map(stripLogo), source: 'notion' }); }
     catch (e) { console.error('[notion] getProjects failed:', e.message); return res.status(502).json({ error: String(e.message || e) }); }
   }
   res.json({ projects, source: 'mock' });
@@ -89,7 +93,7 @@ app.get('/api/projects', async (_req, res) => {
 app.patch('/api/projects/:id', async (req, res) => {
   const b = req.body || {};
   if (notion.configured()) {
-    try { const project = await notion.updateProject(req.params.id, b); cache.delete('projects'); return res.json({ project, source: 'notion' }); }
+    try { const project = await notion.updateProject(req.params.id, b); cache.delete('projects'); return res.json({ project: stripLogo(project), source: 'notion' }); }
     catch (e) { console.error('[notion] updateProject failed:', e.message); return res.status(502).json({ error: String(e.message || e) }); }
   }
   const p = projects.find(x => x.id === req.params.id);
@@ -144,36 +148,56 @@ function cacheLogo(clientName, version, buf, contentType) {
   return `/api/logos/file/${encodeURIComponent(file)}`;
 }
 
+// Resolve one remote logo into a locally cached URL (or pass externals through)
+async function resolveLogo(manifest, key, icon) {
+  if (icon.kind === 'external') return icon.url;
+  const hit = manifest[key];
+  if (hit && hit.version === String(icon.version) && fs.existsSync(path.join(uploadsDir, hit.file))) {
+    return `/api/logos/file/${encodeURIComponent(hit.file)}`;
+  }
+  try {
+    const dl = await fetch(icon.url);
+    if (!dl.ok) return null;
+    const buf = Buffer.from(await dl.arrayBuffer());
+    return cacheLogo(key, icon.version, buf, dl.headers.get('content-type'));
+  } catch (e) {
+    console.error('[logos] cache download failed for', key, e.message);
+    return null;
+  }
+}
+
+// Two layers: per-project logos (Work Projects "Project Logo" files property)
+// win over client logos (Companies page icons, managed in Notion).
 app.get('/api/logos', async (_req, res) => {
   const manifest = readManifest();
-  const map = {};
+  const clients = {};
+  const projectLogos = {};
   if (notion.configured()) {
     try {
       const icons = await cached('logos', () => notion.getCompanyLogos());
       for (const icon of icons) {
-        if (icon.kind === 'external') { map[icon.client] = icon.url; continue; }
-        const hit = manifest[icon.client];
-        if (hit && hit.version === String(icon.version) && fs.existsSync(path.join(uploadsDir, hit.file))) {
-          map[icon.client] = `/api/logos/file/${encodeURIComponent(hit.file)}`;
-          continue;
-        }
-        try {
-          const dl = await fetch(icon.url);
-          if (!dl.ok) continue;
-          const buf = Buffer.from(await dl.arrayBuffer());
-          map[icon.client] = cacheLogo(icon.client, icon.version, buf, dl.headers.get('content-type'));
-        } catch (e) { console.error('[logos] cache download failed for', icon.client, e.message); }
+        const url = await resolveLogo(manifest, 'client:' + icon.client, icon);
+        if (url) clients[icon.client] = url;
       }
-      return res.json({ logos: map, source: 'notion' });
+      const projs = await cached('projects', () => notion.getProjects());
+      for (const p of projs) {
+        if (!p.logo) continue;
+        const url = await resolveLogo(manifest, 'project:' + p.id, p.logo);
+        if (url) projectLogos[p.id] = url;
+      }
+      return res.json({ logos: { clients, projects: projectLogos }, source: 'notion' });
     } catch (e) {
-      console.error('[notion] getCompanyLogos failed:', e.message);
+      console.error('[notion] logo fetch failed:', e.message);
       // fall through to whatever is cached locally
     }
   }
-  for (const [clientName, entry] of Object.entries(manifest)) {
-    if (fs.existsSync(path.join(uploadsDir, entry.file))) map[clientName] = `/api/logos/file/${encodeURIComponent(entry.file)}`;
+  for (const [key, entry] of Object.entries(manifest)) {
+    if (!fs.existsSync(path.join(uploadsDir, entry.file))) continue;
+    const url = `/api/logos/file/${encodeURIComponent(entry.file)}`;
+    if (key.startsWith('project:')) projectLogos[key.slice(8)] = url;
+    else if (key.startsWith('client:')) clients[key.slice(7)] = url;
   }
-  res.json({ logos: map, source: 'cache' });
+  res.json({ logos: { clients, projects: projectLogos }, source: 'cache' });
 });
 
 app.get('/api/logos/file/:name', (req, res) => {
@@ -183,25 +207,28 @@ app.get('/api/logos/file/:name', (req, res) => {
   res.sendFile(file);
 });
 
+// Upload a per-project logo — stored in Notion on the project's "Project
+// Logo" files property. Client logos are managed in Notion directly.
 app.post('/api/logos', async (req, res) => {
-  const { client: clientName, dataUrl } = req.body || {};
-  if (!clientName || !dataUrl) return res.status(400).json({ error: 'client and dataUrl required' });
+  const { projectId, dataUrl } = req.body || {};
+  if (!projectId || !dataUrl) return res.status(400).json({ error: 'projectId and dataUrl required' });
   const match = /^data:([^;]+);base64,(.+)$/.exec(dataUrl);
   if (!match || !LOGO_TYPES[match[1]]) return res.status(400).json({ error: 'unsupported image type' });
   const buf = Buffer.from(match[2], 'base64');
   if (buf.length > 4 * 1024 * 1024) return res.status(400).json({ error: 'image too large (4MB max)' });
   if (notion.configured()) {
     try {
-      await notion.uploadCompanyLogo(clientName, buf, match[1], `${slugFor(clientName)}-logo.${LOGO_TYPES[match[1]]}`);
+      await notion.uploadProjectLogo(projectId, buf, match[1], `project-logo.${LOGO_TYPES[match[1]]}`);
+      cache.delete('projects');
       cache.delete('logos');
     } catch (e) {
-      console.error('[notion] uploadCompanyLogo failed:', e.message);
+      console.error('[notion] uploadProjectLogo failed:', e.message);
       return res.status(502).json({ error: String(e.message || e) });
     }
   }
   // cache the bytes we already have so the UI updates instantly
-  const url = cacheLogo(clientName, Date.now(), buf, match[1]);
-  res.json({ client: clientName, url: `${url}?v=${Date.now()}` });
+  const url = cacheLogo('project:' + projectId, Date.now(), buf, match[1]);
+  res.json({ projectId, url: `${url}?v=${Date.now()}` });
 });
 
 // Deterministic canned replies (mirrors the prototype) until the Hermes/Guppy

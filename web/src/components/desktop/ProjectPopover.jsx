@@ -9,7 +9,7 @@ import { fmtShort } from '../../lib/dates.js';
 const EDIT_STATUSES = [...PROJECT_STATUSES, 'Complete'];
 
 export default function ProjectPopover() {
-  const { projects, tasks, P, todayISO, toggleTask, qaPrefill, setView, saveProject, showToast, logos, uploadLogo } = useStore();
+  const { projects, tasks, P, todayISO, toggleTask, qaPrefill, setView, saveProject, showToast, logos, logoFor, uploadLogo } = useStore();
   const { expId, setExpId, openDrawer, setQaOpen } = useDesk();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(null); // { status, concernsText, statusText }
@@ -22,7 +22,8 @@ export default function ProjectPopover() {
   const st = P.STATUS[p.status] || P.STATUS.Active;
   const rel = tasks.filter(t => t.project === p.name && (!t.done || t.justDone));
   const stale = isStale(p, todayISO);
-  const logo = logos[p.client];
+  const logo = logoFor(p);
+  const projectLogo = logos.projects[p.id];
 
   const startEdit = () => {
     setDraft({ status: p.status, concernsText: (p.concerns || []).map(c => c.text).join('\n'), statusText: p.statusText || '' });
@@ -43,7 +44,7 @@ export default function ProjectPopover() {
   const pickLogo = async e => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
-    try { await uploadLogo(p.client, file); showToast('Logo saved for ' + p.client); }
+    try { await uploadLogo(p.id, file); showToast('Project logo saved to Notion ✓'); }
     catch (err) { showToast("Couldn't save the logo — " + err.message); }
     e.target.value = '';
   };
@@ -81,13 +82,13 @@ export default function ProjectPopover() {
             <div style={{ ...kicker, marginTop: 12, marginBottom: 4 }}>CURRENT STATUS</div>
             <textarea value={draft.statusText} onChange={e => setDraft(d => ({ ...d, statusText: e.target.value }))} placeholder="Where things stand, in a sentence or two." style={{ width: '100%', border: '1px solid var(--line2)', borderRadius: 8, padding: '8px 10px', fontSize: 12.5, color: 'var(--ink)', minHeight: 56, lineHeight: 1.5, resize: 'vertical', outlineColor: 'var(--green)', background: 'var(--card-alt)' }} />
 
-            <div style={{ ...kicker, marginTop: 12, marginBottom: 5 }}>COMPANY LOGO</div>
+            <div style={{ ...kicker, marginTop: 12, marginBottom: 5 }}>PROJECT LOGO</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{ width: 34, height: 34, borderRadius: 8, border: '1px solid var(--line2)', background: 'var(--card-alt)', display: 'grid', placeItems: 'center', overflow: 'hidden', flex: 'none' }}>
                 {logo ? <img src={logo} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : <span style={{ fontSize: 14, color: 'var(--faint)', fontWeight: 800 }}>{(p.client || '?')[0]}</span>}
               </div>
-              <span onClick={() => fileRef.current && fileRef.current.click()} tabIndex={0} className="hover-green" style={{ fontSize: 12, fontWeight: 700, color: 'var(--soft)', border: '1px solid var(--line2)', borderRadius: 7, padding: '6px 12px', cursor: 'pointer', background: 'var(--card)' }}>{logo ? 'Replace logo' : 'Upload logo'}</span>
-              <span style={{ fontSize: 11, color: 'var(--muted)' }}>Shared across all {p.client} projects</span>
+              <span onClick={() => fileRef.current && fileRef.current.click()} tabIndex={0} className="hover-green" style={{ fontSize: 12, fontWeight: 700, color: 'var(--soft)', border: '1px solid var(--line2)', borderRadius: 7, padding: '6px 12px', cursor: 'pointer', background: 'var(--card)' }}>{projectLogo ? 'Replace logo' : 'Upload logo'}</span>
+              <span style={{ fontSize: 11, color: 'var(--muted)' }}>{projectLogo ? 'Saved on this project in Notion' : 'Falls back to the ' + (p.client || 'client') + ' company icon'}</span>
               <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp,image/gif" onChange={pickLogo} style={{ display: 'none' }} />
             </div>
 

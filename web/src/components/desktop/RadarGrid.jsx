@@ -7,7 +7,7 @@ import { projectView } from '../../lib/enrich.js';
 // detail. Read-only otherwise. statusFilter narrows the visible cards without
 // touching the saved order.
 export default function RadarGrid({ statusFilter = 'all' }) {
-  const { orderedProjects, tasks, P, todayISO, moveProjectTo, showToast, logos } = useStore();
+  const { orderedProjects, tasks, P, todayISO, moveProjectTo, showToast, logoFor } = useStore();
   const { setExpId, setMenu } = useDesk();
   const dragging = useRef(null);
   const [dragOverId, setDragOverId] = useState(null);
@@ -37,7 +37,7 @@ export default function RadarGrid({ statusFilter = 'all' }) {
             style={{ background: 'var(--card)', border: '1px solid ' + (dragOverId === p.id ? P.green : 'var(--line)'), borderLeft: '4px solid ' + v.rail, borderRadius: 10, padding: '11px 12px', display: 'flex', flexDirection: 'column', cursor: 'grab', opacity: v.opacity }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              {logos[p.client] && <img src={logos[p.client]} alt="" style={{ width: 18, height: 18, borderRadius: 5, objectFit: 'contain', flex: 'none', background: 'var(--card-alt)' }} />}
+              {logoFor(p) && <img src={logoFor(p)} alt="" style={{ width: 18, height: 18, borderRadius: 5, objectFit: 'contain', flex: 'none', background: 'var(--card-alt)' }} />}
               <span style={{ fontSize: 13.5, fontWeight: 700, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
               <span style={{ fontSize: 10.5, fontWeight: 800, color: v.badgeColor, background: v.badgeBg, padding: '2px 7px', borderRadius: 5, flex: 'none' }}>{v.statusWord}</span>
             </div>

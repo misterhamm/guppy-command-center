@@ -71,7 +71,8 @@ async function projMap() {
     cadence: findProp(P, ['select', 'rich_text'], [/cadence/i, /frequency/i]),
     last: findProp(P, ['date'], [/last/i]),
     next: findProp(P, ['date'], [/next/i]),
-    statusText: findProp(P, ['rich_text'], [/status text/i, /current status/i, /summary/i, /update/i, /^status\b/i])
+    statusText: findProp(P, ['rich_text'], [/status text/i, /current status/i, /summary/i, /update/i, /^status\b/i]),
+    logo: findProp(P, ['files'], [/logo/i, /image/i])
   };
   console.log('[notion] project property map:', Object.fromEntries(Object.entries(_projMap).map(([k, v]) => [k, v ? v.name : '(none)'])));
   return _projMap;
@@ -93,6 +94,7 @@ function readProp(page, prop) {
     case 'date': return v.date && v.date.start ? v.date.start.slice(0, 10) : '';
     case 'relation': return v.relation.map(r => r.id);
     case 'checkbox': return v.checkbox;
+    case 'files': return v.files.map(f => ({ name: f.name, kind: f.type, url: f.type === 'file' ? f.file.url : (f.external ? f.external.url : '') })).filter(f => f.url);
     default: return undefined;
   }
 }
@@ -267,6 +269,13 @@ async function normalizeProject(page, m) {
   // Missing next check-in falls back to last + cadence so staleness math stays valid
   const fallbackNext = new Date(lastISO + 'T12:00:00');
   fallbackNext.setDate(fallbackNext.getDate() + days);
+  // Internal logo metadata (signed URL — never sent to the browser; the logos
+  // route caches the bytes). Version keys off the stable file path, not the
+  // rotating signature.
+  const logoFiles = readProp(page, m.logo) || [];
+  const logo = logoFiles.length
+    ? { kind: logoFiles[0].kind, url: logoFiles[0].url, version: logoFiles[0].url.split('?')[0] }
+    : null;
   return {
     id: page.id,
     name,
@@ -277,7 +286,8 @@ async function normalizeProject(page, m) {
     cadenceDays: days,
     lastISO,
     nextISO: readProp(page, m.next) || fallbackNext.toISOString().slice(0, 10),
-    statusText: readProp(page, m.statusText) || ''
+    statusText: readProp(page, m.statusText) || '',
+    logo
   };
 }
 
@@ -313,11 +323,7 @@ async function companyPageByName(name) {
   }) || null;
 }
 
-// Upload a logo via the Notion File Upload API and set it as the company
-// page's icon — visible in Notion too, and it travels with the workspace.
-export async function uploadCompanyLogo(clientName, buffer, contentType, filename) {
-  const page = await companyPageByName(clientName);
-  if (!page) throw new Error(`Company "${clientName}" not found in the Companies database`);
+async function notionFileUpload(buffer, contentType, filename) {
   const create = await fetch(`${NOTION_API}/file_uploads`, {
     method: 'POST',
     headers: { ...nHeaders(), 'content-type': 'application/json' },
@@ -328,13 +334,37 @@ export async function uploadCompanyLogo(clientName, buffer, contentType, filenam
   form.append('file', new Blob([buffer], { type: contentType }), filename);
   const send = await fetch(`${NOTION_API}/file_uploads/${create.id}/send`, { method: 'POST', headers: nHeaders(), body: form }).then(r => r.json());
   if (send.status !== 'uploaded') throw new Error('Notion file upload failed: ' + (send.message || send.status));
+  return create.id;
+}
+
+// Upload a logo via the Notion File Upload API and set it as the company
+// page's icon — visible in Notion too, and it travels with the workspace.
+// (Not currently exposed in the dashboard — Chris manages client logos in
+// Notion directly; the dashboard uploads per-project logos below.)
+export async function uploadCompanyLogo(clientName, buffer, contentType, filename) {
+  const page = await companyPageByName(clientName);
+  if (!page) throw new Error(`Company "${clientName}" not found in the Companies database`);
+  const uploadId = await notionFileUpload(buffer, contentType, filename);
   const attach = await fetch(`${NOTION_API}/pages/${page.id}`, {
     method: 'PATCH',
     headers: { ...nHeaders(), 'content-type': 'application/json' },
-    body: JSON.stringify({ icon: { type: 'file_upload', file_upload: { id: create.id } } })
+    body: JSON.stringify({ icon: { type: 'file_upload', file_upload: { id: uploadId } } })
   }).then(r => r.json());
   if (attach.object === 'error') throw new Error('Setting page icon failed: ' + attach.message);
   return { pageId: page.id };
+}
+
+// Upload a per-project logo into the Work Projects "Project Logo" files
+// property. Takes precedence over the company icon in the dashboard.
+export async function uploadProjectLogo(projectId, buffer, contentType, filename) {
+  const m = await projMap();
+  if (!m.logo) throw new Error('No files property matching "logo" found on the projects database');
+  const uploadId = await notionFileUpload(buffer, contentType, filename);
+  const page = await client().pages.update({
+    page_id: projectId,
+    properties: { [m.logo.name]: { files: [{ type: 'file_upload', file_upload: { id: uploadId }, name: filename }] } }
+  });
+  return normalizeProject(page, m);
 }
 
 // Company page icons → { client, kind: 'file'|'external', url, version }.

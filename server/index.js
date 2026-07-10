@@ -157,7 +157,7 @@ async function resolveLogo(manifest, key, icon) {
   }
   try {
     const dl = await fetch(icon.url);
-    if (!dl.ok) return null;
+    if (!dl.ok) { console.error('[logos] download HTTP', dl.status, 'for', key); return null; }
     const buf = Buffer.from(await dl.arrayBuffer());
     return cacheLogo(key, icon.version, buf, dl.headers.get('content-type'));
   } catch (e) {

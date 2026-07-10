@@ -378,6 +378,11 @@ export async function getCompanyLogos() {
     if (!name || !pg.icon) continue;
     if (pg.icon.type === 'external') out.push({ client: name, kind: 'external', url: pg.icon.external.url, version: pg.last_edited_time });
     else if (pg.icon.type === 'file') out.push({ client: name, kind: 'file', url: pg.icon.file.url, version: pg.last_edited_time });
+    // Workspace custom emoji (how logos are often added in Notion) — stable
+    // image URL; cache it like a file so we never hotlink.
+    else if (pg.icon.type === 'custom_emoji' && pg.icon.custom_emoji && pg.icon.custom_emoji.url) {
+      out.push({ client: name, kind: 'file', url: pg.icon.custom_emoji.url, version: pg.icon.custom_emoji.url });
+    }
   }
   return out;
 }

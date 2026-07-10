@@ -39,6 +39,7 @@ export function StoreProvider({ children }) {
   const [syncedAt, setSyncedAt] = useState(null);
   const [outage, setOutage] = useState(null); // 'notion' | 'gcal' | null
   const [toast, setToast] = useState(null);
+  const [logos, setLogos] = useState({});
   const [qa, setQa] = useState(EMPTY_QA);
   const [guppyMsgs, setGuppyMsgs] = useState([]);
   const [guppyBusy, setGuppyBusy] = useState(false);
@@ -90,6 +91,7 @@ export function StoreProvider({ children }) {
     } else notionOk = false;
     if (cRes.status === 'fulfilled') setCalendar(cRes.value.weeks);
     else gcalOk = false;
+    api.getLogos().then(r => setLogos(r.logos)).catch(() => { /* logos are cosmetic */ });
     setOutage(!notionOk ? 'notion' : !gcalOk ? 'gcal' : null);
     if (notionOk && gcalOk) setSyncedAt(Date.now());
     setReady(true);
@@ -169,6 +171,32 @@ export function StoreProvider({ children }) {
       return 'failed';
     }
   }, [patchLocal]);
+
+  // ---- project edits (status / concerns / status text → Notion) ----
+  const saveProject = useCallback(async (d) => {
+    const patch = { status: d.status, statusText: d.statusText, concernsText: d.concernsText };
+    try {
+      const res = await api.patchProject(d.id, patch);
+      setProjects(s => {
+        const next = s.map(p => (p.id === d.id ? res.project : p)).filter(p => p.status !== 'Complete');
+        return next;
+      });
+      return 'saved';
+    } catch (e) {
+      return 'failed';
+    }
+  }, []);
+
+  const uploadLogo = useCallback(async (clientName, file) => {
+    const dataUrl = await new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = reject;
+      r.readAsDataURL(file);
+    });
+    const res = await api.uploadLogo(clientName, dataUrl);
+    setLogos(s => ({ ...s, [clientName]: res.url }));
+  }, []);
 
   // ---- quick add ----
   const clients = useMemo(() => clientsMap(projects, tasks), [projects, tasks]);
@@ -290,6 +318,7 @@ export function StoreProvider({ children }) {
     syncedAgo, outage, refresh,
     toast, showToast, dismissToast,
     toggleTask, retryTask, snoozeTask, saveTask,
+    saveProject, uploadLogo, logos,
     qa, qaSet, qaReset, qaPrefill, qaAdd, effectiveQa,
     radarOrder, moveProjectTo, moveProjectBy, persistOrder,
     guppyMsgs, guppySend, guppyBusy,

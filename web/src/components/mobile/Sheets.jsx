@@ -4,7 +4,7 @@ import { useMob } from './MobileApp.jsx';
 import { taskView, eventKind, eventView } from '../../lib/enrich.js';
 import { concernDot } from '../../lib/themes.js';
 import { findEvent, todayEvents, currentAndNext } from '../../lib/calendar.js';
-import { isStale, nextLate, nextDueNow, PRIORITIES, STATUSES, NOTION_URL, titleCase } from '../../lib/logic.js';
+import { isStale, nextLate, nextDueNow, PRIORITIES, STATUSES, NOTION_URL, titleCase, PROJECT_STATUSES } from '../../lib/logic.js';
 import { fmtShort, timeRange } from '../../lib/dates.js';
 
 function Pill({ label, active, onClick, P }) {
@@ -19,12 +19,15 @@ function Kicker({ children, mt = 0 }) {
 
 export default function Sheets() {
   const store = useStore();
-  const { P, tasks, projects, calendar, clients, todayISO, nowMin, tomorrowISO, nextMonISO, nextWeekISO, toggleTask, snoozeTask, saveTask, qa, qaSet, qaAdd, qaPrefill, effectiveQa, guppyMsgs, guppySend, guppyBusy } = store;
+  const { P, tasks, projects, calendar, clients, todayISO, nowMin, tomorrowISO, nextMonISO, nextWeekISO, toggleTask, snoozeTask, saveTask, saveProject, uploadLogo, logos, showToast, qa, qaSet, qaAdd, qaPrefill, effectiveQa, guppyMsgs, guppySend, guppyBusy } = store;
   const { stack, push, pop, closeAll, dr, setDr, drSync, setDrSync, openTaskSheet } = useMob();
 
   const [guppyInput, setGuppyInput] = useState('');
+  const [projDraft, setProjDraft] = useState(null); // { id, status, concernsText, statusText } while editing
+  const [projSync, setProjSync] = useState('idle');
   const guppyScroll = useRef(null);
   const notesRef = useRef(null);
+  const logoRef = useRef(null);
 
   const top = stack.length ? stack[stack.length - 1] : null;
   const below = stack.length > 1 ? stack[stack.length - 2] : null;
@@ -147,12 +150,71 @@ export default function Sheets() {
     const st = P.STATUS[p.status] || P.STATUS.Active;
     const rel = tasks.filter(t => t.project === p.name && (!t.done || t.justDone));
     const stale = isStale(p, todayISO);
-    content = (
+    const logo = logos[p.client];
+    const editingThis = projDraft && projDraft.id === p.id;
+    const saveProj = async () => {
+      if (projSync === 'saving') return;
+      setProjSync('saving');
+      const result = await saveProject(projDraft);
+      setProjSync(result);
+      if (result === 'saved') {
+        const wasComplete = projDraft.status === 'Complete';
+        setProjDraft(null);
+        if (wasComplete) { closeAll(); showToast(p.name + ' marked Complete — off the radar 🎉'); }
+        else showToast('Project saved to Notion ✓');
+      }
+    };
+    const pickLogo = async e => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      try { await uploadLogo(p.client, file); showToast('Logo saved for ' + p.client); }
+      catch (err) { showToast("Couldn't save the logo"); }
+      e.target.value = '';
+    };
+    if (editingThis) {
+      content = (
+        <>
+          <Kicker>STATUS</Kicker>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
+            {[...PROJECT_STATUSES, 'Complete'].map(s => {
+              const active = projDraft.status === s;
+              const sp = P.STATUS[s];
+              return <span key={s} onClick={() => setProjDraft(d => ({ ...d, status: s }))} tabIndex={0} style={{ fontSize: 12.5, fontWeight: 700, color: active ? '#fff' : (sp ? sp.rail : P.soft), background: active ? (sp ? sp.rail : P.green) : 'var(--card)', border: '1px solid ' + (active ? (sp ? sp.rail : P.green) : 'var(--line2)'), borderRadius: 99, padding: '9px 13px', cursor: 'pointer' }}>{s}</span>;
+            })}
+          </div>
+          <Kicker>NEXT CONCERN · one per line</Kicker>
+          <textarea value={projDraft.concernsText} onChange={e => setProjDraft(d => ({ ...d, concernsText: e.target.value }))} style={{ width: '100%', border: '1px solid var(--line2)', borderRadius: 9, padding: '10px 12px', fontSize: 13, color: 'var(--ink)', minHeight: 80, marginBottom: 14, lineHeight: 1.5, resize: 'vertical', outlineColor: 'var(--green)', background: 'var(--card-alt)' }} />
+          <Kicker>CURRENT STATUS</Kicker>
+          <textarea value={projDraft.statusText} onChange={e => setProjDraft(d => ({ ...d, statusText: e.target.value }))} style={{ width: '100%', border: '1px solid var(--line2)', borderRadius: 9, padding: '10px 12px', fontSize: 13, color: 'var(--ink)', minHeight: 64, marginBottom: 14, lineHeight: 1.5, resize: 'vertical', outlineColor: 'var(--green)', background: 'var(--card-alt)' }} />
+          <Kicker>COMPANY LOGO</Kicker>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+            <div style={{ width: 38, height: 38, borderRadius: 9, border: '1px solid var(--line2)', background: 'var(--card-alt)', display: 'grid', placeItems: 'center', overflow: 'hidden', flex: 'none' }}>
+              {logo ? <img src={logo} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : <span style={{ fontSize: 15, color: 'var(--faint)', fontWeight: 800 }}>{(p.client || '?')[0]}</span>}
+            </div>
+            <span onClick={() => logoRef.current && logoRef.current.click()} tabIndex={0} style={{ fontSize: 13, fontWeight: 700, color: 'var(--soft)', border: '1px solid var(--line2)', borderRadius: 9, padding: '9px 14px', cursor: 'pointer', background: 'var(--card)' }}>{logo ? 'Replace logo' : 'Upload logo'}</span>
+            <span style={{ fontSize: 11, color: 'var(--muted)' }}>Shared across {p.client}</span>
+            <input ref={logoRef} type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp,image/gif" onChange={pickLogo} style={{ display: 'none' }} />
+          </div>
+          {projSync === 'failed' && (
+            <div style={{ border: '1px solid var(--red)', background: 'var(--red-soft)', borderRadius: 10, padding: '10px 13px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--red)', flex: 1 }}>Couldn't reach Notion.</span>
+              <span onClick={saveProj} tabIndex={0} style={{ fontSize: 12.5, fontWeight: 800, color: '#fff', background: 'var(--red)', padding: '6px 12px', borderRadius: 7, cursor: 'pointer' }}>Retry</span>
+            </div>
+          )}
+          <div onClick={saveProj} tabIndex={0} style={{ background: 'var(--green)', color: '#fff', textAlign: 'center', fontWeight: 800, fontSize: 14, padding: '13px 0', borderRadius: 10, cursor: 'pointer' }}>
+            {projSync === 'saving' ? 'Saving…' : projSync === 'saved' ? 'Saved ✓' : 'Save to Notion'}
+          </div>
+          <div onClick={() => { setProjDraft(null); setProjSync('idle'); }} tabIndex={0} style={{ textAlign: 'center', fontSize: 13, fontWeight: 600, color: 'var(--muted)', padding: '12px 0 0', cursor: 'pointer' }}>Cancel</div>
+        </>
+      );
+    } else content = (
       <>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {logo && <img src={logo} alt="" style={{ width: 22, height: 22, borderRadius: 6, objectFit: 'contain', flex: 'none', background: 'var(--card-alt)' }} />}
           <span style={{ fontSize: 10.5, fontWeight: 800, color: st.color, background: st.bg, padding: '2px 8px', borderRadius: 5 }}>{st.word}</span>
           <span style={{ fontSize: 12.5, color: 'var(--muted)', fontWeight: 600 }}>{p.client}</span>
-          <a href={NOTION_URL} target="_blank" rel="noreferrer" style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700 }}>Open in Notion ↗</a>
+          <span onClick={() => { setProjDraft({ id: p.id, status: p.status, concernsText: (p.concerns || []).map(c => c.text).join('\n'), statusText: p.statusText || '' }); setProjSync('idle'); }} tabIndex={0} style={{ marginLeft: 'auto', fontSize: 12.5, fontWeight: 700, color: 'var(--green)', cursor: 'pointer' }}>✎ Edit</span>
+          <a href={NOTION_URL} target="_blank" rel="noreferrer" style={{ fontSize: 12, fontWeight: 700 }}>Notion ↗</a>
         </div>
         <div style={{ fontWeight: 800, color: 'var(--muted)', fontSize: 10.5, letterSpacing: '.04em', marginTop: 14 }}>CURRENT CONCERNS</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginTop: 5 }}>
@@ -186,7 +248,7 @@ export default function Sheets() {
         })}
         {rel.length === 0 && <div style={{ fontSize: 12.5, color: 'var(--muted)', padding: '10px 0', borderTop: '1px solid var(--line-soft)' }}>No open tasks on this project.</div>}
         <div onClick={() => { qaPrefill({ client: p.client, project: p.name }); closeAll(); push({ type: 'qa' }); }} tabIndex={0} style={{ marginTop: 14, border: '1.5px dashed var(--green)', borderRadius: 10, padding: '11px 0', textAlign: 'center', fontSize: 13, fontWeight: 700, color: 'var(--green)', cursor: 'pointer', opacity: 0.9 }}>+ Add task to this project</div>
-        <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--line-soft)', fontSize: 11.5, color: 'var(--muted)' }}>Read-only — edit project details in Notion. Tasks above are live.</div>
+        <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--line-soft)', fontSize: 11.5, color: 'var(--muted)' }}>Status, concerns & status text are editable here — everything else lives in Notion.</div>
       </>
     );
   }

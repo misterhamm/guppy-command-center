@@ -11,7 +11,7 @@ import * as gcal from './sources/gcal.js';
 import * as guppy from './sources/guppy.js';
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '8mb' })); // logo uploads arrive as base64 data URLs
 
 // Short TTL cache so the client's 2–5 min polling (and StrictMode double
 // fetches) don't hammer Notion/Google. Writes invalidate the tasks cache.
@@ -86,12 +86,77 @@ app.get('/api/projects', async (_req, res) => {
   res.json({ projects, source: 'mock' });
 });
 
+app.patch('/api/projects/:id', async (req, res) => {
+  const b = req.body || {};
+  if (notion.configured()) {
+    try { const project = await notion.updateProject(req.params.id, b); cache.delete('projects'); return res.json({ project, source: 'notion' }); }
+    catch (e) { console.error('[notion] updateProject failed:', e.message); return res.status(502).json({ error: String(e.message || e) }); }
+  }
+  const p = projects.find(x => x.id === req.params.id);
+  if (!p) return res.status(404).json({ error: 'not found' });
+  if (b.status) p.status = b.status;
+  if ('statusText' in b) p.statusText = b.statusText;
+  if ('concernsText' in b) p.concerns = String(b.concernsText || '').split(/\n+/).map(s => s.trim()).filter(Boolean).map(text => ({ text, tone: 'mute' }));
+  res.json({ project: p, source: 'mock' });
+});
+
 app.get('/api/calendar', async (_req, res) => {
   if (gcal.configured()) {
     try { return res.json({ weeks: await cached('calendar', () => gcal.getCalendar()), source: 'gcal' }); }
     catch (e) { console.error('[gcal] getCalendar failed:', e.message); return res.status(502).json({ error: String(e.message || e) }); }
   }
   res.json({ weeks: buildCalendar(), source: 'mock' });
+});
+
+// ---- company logos ----
+// Stored server-side (server/uploads, gitignored), keyed by client name via a
+// manifest. Uploaded from the project editor as base64 data URLs. When this
+// moves to the Hermes server, migrate the uploads folder with it.
+import fs from 'node:fs';
+const uploadsDir = path.join(path.dirname(fileURLToPath(import.meta.url)), 'uploads');
+const manifestPath = path.join(uploadsDir, 'manifest.json');
+function readManifest() {
+  try { return JSON.parse(fs.readFileSync(manifestPath, 'utf8')); } catch (e) { return {}; }
+}
+
+app.get('/api/logos', (_req, res) => {
+  const manifest = readManifest();
+  const map = {};
+  for (const [clientName, file] of Object.entries(manifest)) {
+    let v = 0;
+    try { v = Math.round(fs.statSync(path.join(uploadsDir, file)).mtimeMs); } catch (e) { continue; }
+    map[clientName] = `/api/logos/file/${encodeURIComponent(file)}?v=${v}`;
+  }
+  res.json({ logos: map });
+});
+
+app.get('/api/logos/file/:name', (req, res) => {
+  const name = path.basename(req.params.name); // no traversal
+  const file = path.join(uploadsDir, name);
+  if (!fs.existsSync(file)) return res.status(404).end();
+  res.sendFile(file);
+});
+
+const LOGO_TYPES = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/svg+xml': 'svg', 'image/webp': 'webp', 'image/gif': 'gif' };
+app.post('/api/logos', (req, res) => {
+  const { client: clientName, dataUrl } = req.body || {};
+  if (!clientName || !dataUrl) return res.status(400).json({ error: 'client and dataUrl required' });
+  const match = /^data:([^;]+);base64,(.+)$/.exec(dataUrl);
+  if (!match || !LOGO_TYPES[match[1]]) return res.status(400).json({ error: 'unsupported image type' });
+  const buf = Buffer.from(match[2], 'base64');
+  if (buf.length > 4 * 1024 * 1024) return res.status(400).json({ error: 'image too large (4MB max)' });
+  fs.mkdirSync(uploadsDir, { recursive: true });
+  const slug = clientName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'client';
+  const file = `${slug}.${LOGO_TYPES[match[1]]}`;
+  const manifest = readManifest();
+  // drop a previous logo with a different extension
+  if (manifest[clientName] && manifest[clientName] !== file) {
+    try { fs.unlinkSync(path.join(uploadsDir, manifest[clientName])); } catch (e) { /* already gone */ }
+  }
+  fs.writeFileSync(path.join(uploadsDir, file), buf);
+  manifest[clientName] = file;
+  fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+  res.json({ client: clientName, url: `/api/logos/file/${encodeURIComponent(file)}?v=${Date.now()}` });
 });
 
 // Deterministic canned replies (mirrors the prototype) until the Hermes/Guppy

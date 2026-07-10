@@ -41,7 +41,7 @@ export default function MobileApp() {
   const subs = {
     today: `${dateShort} · ${odCount} overdue, ${tdCount} due · synced ${syncedAgo ?? '–'}m ago`,
     todo: `${open.length} open tasks · synced ${syncedAgo ?? '–'}m ago`,
-    projects: `${projects.length} non-complete · edit in Notion`,
+    projects: `${projects.length} non-complete · tap to view & edit`,
     calendar: 'Read-only · synced from Google'
   };
 

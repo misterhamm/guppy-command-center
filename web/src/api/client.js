@@ -20,6 +20,9 @@ export const api = {
   createTask: (task) => req('POST', '/tasks', task),
   patchTask: (id, patch) => req('PATCH', '/tasks/' + encodeURIComponent(id), patch),
   getProjects: () => req('GET', '/projects'),
+  patchProject: (id, patch) => req('PATCH', '/projects/' + encodeURIComponent(id), patch),
   getCalendar: () => req('GET', '/calendar'),
+  getLogos: () => req('GET', '/logos'),
+  uploadLogo: (client, dataUrl) => req('POST', '/logos', { client, dataUrl }),
   guppyChat: (messages) => req('POST', '/guppy/chat', { messages })
 };

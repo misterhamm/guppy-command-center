@@ -248,41 +248,62 @@ function concernTone(status, index) {
   return status === 'At Risk' ? 'red' : status === 'Waiting' ? 'amber' : 'mute';
 }
 
+async function normalizeProject(page, m) {
+  const name = readProp(page, m.title) || '(untitled)';
+  titleById.set(page.id, name);
+  idByTitle.set(name.toLowerCase(), page.id);
+  let clientVal = readProp(page, m.client);
+  if (Array.isArray(clientVal)) clientVal = clientVal.length ? await pageTitle(clientVal[0]) : '';
+  const statusRaw = readProp(page, m.status) || 'Active';
+  // Mirror Notion status values exactly; normalize case for the known set
+  const known = ['Active', 'Waiting', 'At Risk', 'Standby', 'On Hold', 'Complete'];
+  const status = known.find(k => k.toLowerCase() === statusRaw.toLowerCase()) || statusRaw;
+  const cadence = readProp(page, m.cadence) || 'Weekly';
+  const concernsText = readProp(page, m.concerns) || '';
+  const concerns = concernsText.split(/\n+/).map(s => s.trim()).filter(Boolean)
+    .map((text, i) => ({ text, tone: concernTone(status, i) }));
+  const days = cadenceDays(cadence);
+  const lastISO = readProp(page, m.last) || page.last_edited_time.slice(0, 10);
+  // Missing next check-in falls back to last + cadence so staleness math stays valid
+  const fallbackNext = new Date(lastISO + 'T12:00:00');
+  fallbackNext.setDate(fallbackNext.getDate() + days);
+  return {
+    id: page.id,
+    name,
+    client: clientVal || '',
+    status,
+    concerns,
+    cadence,
+    cadenceDays: days,
+    lastISO,
+    nextISO: readProp(page, m.next) || fallbackNext.toISOString().slice(0, 10),
+    statusText: readProp(page, m.statusText) || ''
+  };
+}
+
 export async function getProjects() {
   const m = await projMap();
   const pages = await queryAll(projectsDb());
   const projects = [];
-  for (const page of pages) {
-    const name = readProp(page, m.title) || '(untitled)';
-    titleById.set(page.id, name);
-    idByTitle.set(name.toLowerCase(), page.id);
-    let clientVal = readProp(page, m.client);
-    if (Array.isArray(clientVal)) clientVal = clientVal.length ? await pageTitle(clientVal[0]) : '';
-    const statusRaw = readProp(page, m.status) || 'Active';
-    // Mirror Notion status values exactly; normalize case for the known set
-    const known = ['Active', 'Waiting', 'At Risk', 'Standby', 'On Hold', 'Complete'];
-    const status = known.find(k => k.toLowerCase() === statusRaw.toLowerCase()) || statusRaw;
-    const cadence = readProp(page, m.cadence) || 'Weekly';
-    const concernsText = readProp(page, m.concerns) || '';
-    const concerns = concernsText.split(/\n+/).map(s => s.trim()).filter(Boolean)
-      .map((text, i) => ({ text, tone: concernTone(status, i) }));
-    const days = cadenceDays(cadence);
-    const lastISO = readProp(page, m.last) || page.last_edited_time.slice(0, 10);
-    // Missing next check-in falls back to last + cadence so staleness math stays valid
-    const fallbackNext = new Date(lastISO + 'T12:00:00');
-    fallbackNext.setDate(fallbackNext.getDate() + days);
-    projects.push({
-      id: page.id,
-      name,
-      client: clientVal || '',
-      status,
-      concerns,
-      cadence,
-      cadenceDays: days,
-      lastISO,
-      nextISO: readProp(page, m.next) || fallbackNext.toISOString().slice(0, 10),
-      statusText: readProp(page, m.statusText) || ''
-    });
-  }
+  for (const page of pages) projects.push(await normalizeProject(page, m));
   return projects;
+}
+
+// Dashboard project edits: status, Next Concern (newline-separated), Current
+// Status. Everything else stays Notion-side.
+export async function updateProject(id, patch) {
+  const m = await projMap();
+  const properties = {};
+  if (patch.status && m.status) {
+    const name = optionName(m.status, patch.status);
+    properties[m.status.name] = m.status.type === 'status' ? { status: { name } } : { select: { name } };
+  }
+  if ('concernsText' in patch && m.concerns) {
+    properties[m.concerns.name] = { rich_text: patch.concernsText ? [{ text: { content: patch.concernsText.slice(0, 2000) } }] : [] };
+  }
+  if ('statusText' in patch && m.statusText) {
+    properties[m.statusText.name] = { rich_text: patch.statusText ? [{ text: { content: patch.statusText.slice(0, 2000) } }] : [] };
+  }
+  const page = await client().pages.update({ page_id: id, properties });
+  return normalizeProject(page, m);
 }

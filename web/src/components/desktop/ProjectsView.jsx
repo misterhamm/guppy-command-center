@@ -19,7 +19,7 @@ export default function ProjectsView() {
     <div style={{ padding: '22px 26px 90px' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 12 }}>
         <div style={{ fontSize: 22, fontWeight: 800 }}>Projects</div>
-        <div style={{ fontSize: 12, color: 'var(--muted)' }}>{projects.length} non-complete · drag to reorder · click for detail · edit in Notion</div>
+        <div style={{ fontSize: 12, color: 'var(--muted)' }}>{projects.length} non-complete · drag to reorder · click to view & edit</div>
       </div>
       <div style={{ display: 'flex', gap: 6, marginBottom: 12, alignItems: 'center', flexWrap: 'wrap' }}>
         {chips.map(c => {

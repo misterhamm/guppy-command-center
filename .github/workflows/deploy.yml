@@ -1,0 +1,26 @@
+name: Deploy Command Center
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: guppy-command-center-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.GUPPY_DEPLOY_HOST }}
+          username: ${{ secrets.GUPPY_DEPLOY_USER }}
+          key: ${{ secrets.GUPPY_DEPLOY_SSH_KEY }}
+          port: 22
+          script_stop: true
+          script: |
+            sudo /usr/local/bin/deploy-guppy-command-center

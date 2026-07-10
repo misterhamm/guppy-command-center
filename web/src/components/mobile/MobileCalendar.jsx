@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useStore } from '../../state/store.jsx';
 import { useMob } from './MobileApp.jsx';
+import MobileScroll from './MobileScroll.jsx';
 import { dayViews } from '../../lib/calendar.js';
 
 export default function MobileCalendar() {
@@ -17,7 +18,7 @@ export default function MobileCalendar() {
   };
 
   return (
-    <div style={{ flex: 1, overflowY: 'auto', padding: '2px 16px calc(96px + env(safe-area-inset-bottom, 0px))' }}>
+    <MobileScroll style={{ padding: '2px 16px calc(96px + env(safe-area-inset-bottom, 0px))' }}>
       <div style={{ display: 'flex', background: 'var(--panel)', borderRadius: 9, padding: 2, margin: '6px 0 14px' }}>
         {tab('this', 'This week')}
         {tab('next', 'Next week')}
@@ -48,6 +49,6 @@ export default function MobileCalendar() {
           </div>
         </React.Fragment>
       ))}
-    </div>
+    </MobileScroll>
   );
 }

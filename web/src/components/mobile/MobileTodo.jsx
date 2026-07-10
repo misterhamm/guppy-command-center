@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useStore } from '../../state/store.jsx';
 import TaskCard from './TaskCard.jsx';
+import MobileScroll from './MobileScroll.jsx';
 import { todoGroups, taskCounts, TODO_EMPTY_LINES } from '../../lib/selectors.js';
 
 export default function MobileTodo() {
@@ -20,7 +21,7 @@ export default function MobileTodo() {
   ];
 
   return (
-    <div style={{ flex: 1, overflowY: 'auto', padding: '2px 16px calc(96px + env(safe-area-inset-bottom, 0px))' }}>
+    <MobileScroll style={{ padding: '2px 16px calc(96px + env(safe-area-inset-bottom, 0px))' }}>
       <div className="mobile-scroll-x" style={{ display: 'flex', gap: 6, overflowX: 'auto', margin: '6px -16px 10px', padding: '0 16px' }}>
         {filterDefs.map(f => {
           const active = filter === f.key;
@@ -51,6 +52,6 @@ export default function MobileTodo() {
         </React.Fragment>
       ))}
       <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 4, padding: '0 2px' }}>Hold a task for quick actions · sorted overdue → today → upcoming</div>
-    </div>
+    </MobileScroll>
   );
 }

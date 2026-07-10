@@ -31,7 +31,7 @@ function Select({ id, value, options, onPick, color, extra }) {
 }
 
 export default function EditDrawer() {
-  const { P, todayISO, tomorrowISO, nextMonISO, clients, saveTask } = useStore();
+  const { P, todayISO, tomorrowISO, nextMonISO, clients, saveTask, deleteTask } = useStore();
   const { drawerTask: d, setDrawerTask, closeDrawer, setMenu } = useDesk();
   const [sync, setSync] = useState('idle'); // idle | saving | saved | failed
   const [orig] = useState(d);
@@ -133,8 +133,13 @@ export default function EditDrawer() {
         <span style={{ flex: 1 }} />
         <span style={{ color: 'var(--faint)' }}>⌘⏎ saves</span>
       </div>
-      <div style={{ marginTop: 'auto', paddingTop: 14, borderTop: '1px solid var(--line-soft)' }}>
+      <div style={{ marginTop: 'auto', paddingTop: 14, borderTop: '1px solid var(--line-soft)', display: 'flex', alignItems: 'center' }}>
         <a href={NOTION_URL} target="_blank" rel="noreferrer" style={{ fontSize: 12, fontWeight: 700 }}>Open in Notion ↗</a>
+        <span
+          onClick={() => { closeDrawer(); deleteTask(d.id); }}
+          tabIndex={0}
+          style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700, color: P.red, cursor: 'pointer', padding: '2px 4px' }}
+        >Delete task</span>
       </div>
     </div>
   );

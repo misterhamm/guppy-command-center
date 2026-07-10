@@ -6,7 +6,7 @@ import { todayEvents, nowBar } from '../../lib/calendar.js';
 
 export default function Sidebar({ anyFailed }) {
   const { view, setView, tasks, projects, calendar, todayISO, nowMin, P, outage, syncedAgo, refresh, theme, setTheme, showToast, textScale, cycleTextScale } = useStore();
-  const { setMenu, setSelId } = useDesk();
+  const { setMenu, setSelId, setEvId } = useDesk();
 
   const { open, attention } = taskCounts(tasks, todayISO);
   const now = nowBar(todayEvents(calendar, todayISO), nowMin);
@@ -25,7 +25,7 @@ export default function Sidebar({ anyFailed }) {
   const syncDot = (anyFailed || outage) ? P.red : P.green;
 
   return (
-    <div style={{ width: 210, flex: 'none', background: 'var(--panel)', borderRight: '1px solid var(--line-soft)', display: 'flex', flexDirection: 'column', padding: '20px 12px 16px' }}>
+    <div style={{ width: 210, flex: 'none', background: 'var(--panel)', borderRight: '1px solid var(--line-soft)', display: 'flex', flexDirection: 'column', padding: '20px 12px 16px', overflowY: 'auto', minHeight: 0 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '0 10px 22px' }}>
         <div style={{ width: 26, height: 26, borderRadius: 8, overflow: 'hidden', flex: 'none', border: '1px solid var(--line2)' }}>
           <img src="/guppy.jpg" alt="Guppy" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: '50% 12%', display: 'block' }} />
@@ -53,11 +53,23 @@ export default function Sidebar({ anyFailed }) {
       </div>
 
       <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <div style={{ padding: '9px 11px', background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 9, marginBottom: 4 }}>
-          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.05em', color: 'var(--muted)' }}>{now.kicker}</div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)', marginTop: 2, lineHeight: 1.35 }}>{now.title}</div>
-          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 1 }}>{now.sub}</div>
-        </div>
+        {(() => {
+          const nowEvent = now.current || now.next;
+          return (
+            <div
+              onClick={() => { if (nowEvent) setEvId(nowEvent.id); }}
+              tabIndex={nowEvent ? 0 : -1}
+              onKeyDown={e => { if (e.key === 'Enter' && nowEvent) setEvId(nowEvent.id); }}
+              className={nowEvent ? 'hover-green' : undefined}
+              title={nowEvent ? 'Open event details' : undefined}
+              style={{ padding: '9px 11px', background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 9, marginBottom: 4, cursor: nowEvent ? 'pointer' : 'default' }}
+            >
+              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.05em', color: 'var(--muted)' }}>{now.kicker}</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)', marginTop: 2, lineHeight: 1.35 }}>{now.title}</div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 1 }}>{now.sub}{nowEvent ? ' ›' : ''}</div>
+            </div>
+          );
+        })()}
         <div style={{ padding: '8px 12px 0', borderTop: '1px solid var(--line-soft)', fontSize: 11.5, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{ width: 7, height: 7, borderRadius: 99, background: syncDot }} />{syncLabel}
         </div>

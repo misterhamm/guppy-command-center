@@ -89,7 +89,7 @@ export default function DesktopApp() {
   return (
     <DeskCtx.Provider value={desk}>
       <div
-        style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--paper)', color: 'var(--ink)' }}
+        style={{ display: 'flex', height: '100%', overflow: 'hidden', background: 'var(--paper)', color: 'var(--ink)' }}
         onClick={() => { if (menu) setMenu(null); }}
       >
         <Sidebar anyFailed={anyFailed} />

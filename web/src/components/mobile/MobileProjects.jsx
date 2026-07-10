@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useStore } from '../../state/store.jsx';
 import { useMob } from './MobileApp.jsx';
 import ReorderList from './ReorderList.jsx';
+import MobileScroll from './MobileScroll.jsx';
 import { projectView } from '../../lib/enrich.js';
 import { PROJECT_STATUSES } from '../../lib/logic.js';
 
@@ -20,7 +21,7 @@ export default function MobileProjects() {
   const visible = filter === 'all' ? orderedProjects : orderedProjects.filter(p => p.status === filter);
 
   return (
-    <div style={{ flex: 1, overflowY: 'auto', padding: '2px 16px calc(96px + env(safe-area-inset-bottom, 0px))' }}>
+    <MobileScroll style={{ padding: '2px 16px calc(96px + env(safe-area-inset-bottom, 0px))' }}>
       <div className="mobile-scroll-x" style={{ display: 'flex', gap: 6, overflowX: 'auto', margin: '6px -16px 4px', padding: '0 16px' }}>
         {chips.map(c => {
           const active = filter === c.key;
@@ -71,6 +72,6 @@ export default function MobileProjects() {
           })}
         </div>
       )}
-    </div>
+    </MobileScroll>
   );
 }

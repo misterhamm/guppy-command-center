@@ -65,7 +65,7 @@ export default function MobileApp() {
 
   return (
     <MobCtx.Provider value={mob}>
-      <div style={{ height: '100dvh', position: 'relative', background: 'var(--paper)', color: 'var(--ink)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div style={{ height: '100%', position: 'relative', background: 'var(--paper)', color: 'var(--ink)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
         {/* top bar */}
         <div style={{ flex: 'none', display: 'flex', alignItems: 'center', gap: 8, padding: 'calc(6px + env(safe-area-inset-top, 0px)) 18px 10px' }}>
@@ -73,7 +73,6 @@ export default function MobileApp() {
             <div style={{ fontSize: 21, fontWeight: 800, lineHeight: 1.1 }}>{titles[view]}</div>
             <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600, marginTop: 1 }}>{subs[view]}</div>
           </div>
-          <div onClick={() => refresh().catch(() => showToast('Refresh failed'))} tabIndex={0} title="Refresh" style={{ width: 38, height: 38, borderRadius: 99, border: '1px solid var(--line2)', background: 'var(--card)', display: 'grid', placeItems: 'center', fontSize: 15, color: 'var(--soft)', cursor: 'pointer', flex: 'none' }}>↻</div>
           <div onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} tabIndex={0} title="Theme" style={{ width: 38, height: 38, borderRadius: 99, border: '1px solid var(--line2)', background: 'var(--card)', display: 'grid', placeItems: 'center', fontSize: 14, color: 'var(--soft)', cursor: 'pointer', flex: 'none' }}>{theme === 'dark' ? '☀' : '☾'}</div>
           <div onClick={cycleTextScale} tabIndex={0} title={'Text size · ' + Math.round(textScale * 100) + '%'} style={{ width: 38, height: 38, borderRadius: 99, border: '1px solid var(--line2)', background: 'var(--card)', display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 800, color: 'var(--soft)', cursor: 'pointer', flex: 'none' }}>Aa</div>
           <div onClick={() => push({ type: 'guppy' })} tabIndex={0} style={{ width: 38, height: 38, borderRadius: 99, overflow: 'hidden', flex: 'none', border: '2px solid var(--green)', cursor: 'pointer' }}>

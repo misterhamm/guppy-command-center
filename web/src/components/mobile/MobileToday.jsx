@@ -3,6 +3,7 @@ import { useStore } from '../../state/store.jsx';
 import { useMob } from './MobileApp.jsx';
 import TaskCard from './TaskCard.jsx';
 import ReorderList from './ReorderList.jsx';
+import MobileScroll from './MobileScroll.jsx';
 import { todayGroups } from '../../lib/selectors.js';
 import { todayEvents, currentAndNext, dayViews } from '../../lib/calendar.js';
 import { projectView } from '../../lib/enrich.js';
@@ -33,12 +34,16 @@ export default function MobileToday() {
   const stripUp = () => { strip.current = {}; };
 
   return (
-    <div style={{ flex: 1, overflowY: 'auto', padding: '2px 16px calc(96px + env(safe-area-inset-bottom, 0px))' }}>
-      {/* now line */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 10, padding: '8px 12px', margin: '4px 0 10px' }}>
+    <MobileScroll style={{ padding: '2px 16px calc(96px + env(safe-area-inset-bottom, 0px))' }}>
+      {/* now line — tap for event details */}
+      <div
+        onClick={() => { const ev = current || next; if (ev) push({ type: 'event', id: ev.id }); }}
+        tabIndex={0}
+        style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 10, padding: '8px 12px', margin: '4px 0 10px', cursor: (current || next) ? 'pointer' : 'default' }}
+      >
         <span style={{ width: 7, height: 7, borderRadius: 99, background: 'var(--green)', flex: 'none' }} />
         <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nowTitle}</span>
-        <span style={{ fontSize: 11.5, color: 'var(--muted)', flex: 'none', marginLeft: 'auto' }}>{nowSub}</span>
+        <span style={{ fontSize: 11.5, color: 'var(--muted)', flex: 'none', marginLeft: 'auto' }}>{nowSub}{(current || next) ? ' ›' : ''}</span>
       </div>
 
       {groups.map(g => (
@@ -135,6 +140,6 @@ export default function MobileToday() {
           )}
         </>
       )}
-    </div>
+    </MobileScroll>
   );
 }

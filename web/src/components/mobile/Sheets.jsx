@@ -19,7 +19,7 @@ function Kicker({ children, mt = 0 }) {
 
 export default function Sheets() {
   const store = useStore();
-  const { P, tasks, projects, calendar, clients, todayISO, nowMin, tomorrowISO, nextMonISO, nextWeekISO, toggleTask, snoozeTask, saveTask, saveProject, uploadLogo, logos, logoFor, showToast, qa, qaSet, qaAdd, qaPrefill, effectiveQa, guppyMsgs, guppySend, guppyBusy } = store;
+  const { P, tasks, projects, calendar, clients, todayISO, nowMin, tomorrowISO, nextMonISO, nextWeekISO, toggleTask, snoozeTask, saveTask, deleteTask, saveProject, uploadLogo, logos, logoFor, showToast, qa, qaSet, qaAdd, qaPrefill, effectiveQa, guppyMsgs, guppySend, guppyBusy } = store;
   const { stack, push, pop, closeAll, dr, setDr, drSync, setDrSync, openTaskSheet } = useMob();
 
   const [guppyInput, setGuppyInput] = useState('');
@@ -71,7 +71,8 @@ export default function Sheets() {
           <input type="date" onChange={e => { const v = e.target.value; if (v) { snoozeTask(t.id, v, fmtShort(v)); pop(); } }} style={{ fontSize: 12, color: 'var(--soft)', background: 'var(--card)', border: '1px solid var(--line2)', borderRadius: 99, padding: '7px 12px', width: 140 }} />
         </div>
         <div onClick={() => { openTaskSheet(t.id, true); setTimeout(() => { if (notesRef.current) notesRef.current.focus(); }, 250); }} tabIndex={0} style={{ border: '1px solid var(--line2)', borderRadius: 10, padding: '12px 0', textAlign: 'center', fontSize: 13, fontWeight: 700, color: 'var(--soft)', cursor: 'pointer', marginBottom: 8 }}>✎ Add note</div>
-        <div onClick={() => openTaskSheet(t.id, true)} tabIndex={0} style={{ border: '1px solid var(--line2)', borderRadius: 10, padding: '12px 0', textAlign: 'center', fontSize: 13, fontWeight: 700, color: 'var(--soft)', cursor: 'pointer' }}>Open full editor</div>
+        <div onClick={() => openTaskSheet(t.id, true)} tabIndex={0} style={{ border: '1px solid var(--line2)', borderRadius: 10, padding: '12px 0', textAlign: 'center', fontSize: 13, fontWeight: 700, color: 'var(--soft)', cursor: 'pointer', marginBottom: 8 }}>Open full editor</div>
+        <div onClick={() => { closeAll(); deleteTask(t.id); }} tabIndex={0} style={{ border: '1px solid var(--red)', borderRadius: 10, padding: '12px 0', textAlign: 'center', fontSize: 13, fontWeight: 700, color: 'var(--red)', cursor: 'pointer' }}>Delete task</div>
       </>
     );
   }
@@ -138,6 +139,7 @@ export default function Sheets() {
         <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{ width: 6, height: 6, borderRadius: 99, background: syncDot }} />{syncLabel}
           <span style={{ flex: 1 }} />
+          <span onClick={() => { closeAll(); deleteTask(dr.id); }} tabIndex={0} style={{ fontWeight: 700, fontSize: 11.5, color: P.red, cursor: 'pointer' }}>Delete</span>
           <a href={NOTION_URL} target="_blank" rel="noreferrer" style={{ fontWeight: 700, fontSize: 11.5 }}>Open in Notion ↗</a>
         </div>
       </>

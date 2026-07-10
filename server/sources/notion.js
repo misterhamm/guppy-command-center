@@ -233,6 +233,12 @@ export async function updateTask(id, patch) {
   return normalizeTask(page, m, 999);
 }
 
+// Delete = archive in Notion (recoverable from Notion's trash; restore
+// un-archives for the toast Undo).
+export async function setTaskArchived(id, archived) {
+  await client().pages.update({ page_id: id, archived: !!archived });
+}
+
 // ---------- projects ----------
 
 const CADENCE_DAYS = [
@@ -365,6 +371,28 @@ export async function uploadProjectLogo(projectId, buffer, contentType, filename
     properties: { [m.logo.name]: { files: [{ type: 'file_upload', file_upload: { id: uploadId }, name: filename }] } }
   });
   return normalizeProject(page, m);
+}
+
+// Shorthand → canonical client name, managed in Notion via an "Aliases"
+// rich_text property on Companies (comma/newline-separated, e.g. "BSG" on
+// Bridgespan Group). Used by Quick Add's natural-language parser.
+export async function getClientAliases() {
+  const dbId = await companiesDb();
+  const props = await schema(dbId);
+  const aliasProp = findProp(props, ['rich_text'], [/alias/i, /aka/i, /shorthand/i, /nickname/i]);
+  if (!aliasProp) return {};
+  const pages = await queryAll(dbId);
+  const map = {};
+  for (const pg of pages) {
+    const t = Object.values(pg.properties).find(p => p.type === 'title');
+    const name = t ? plain(t.title) : '';
+    const raw = readProp(pg, aliasProp) || '';
+    if (!name || !raw) continue;
+    for (const alias of raw.split(/[,;\n]+/).map(s => s.trim()).filter(Boolean)) {
+      map[alias.toLowerCase()] = name;
+    }
+  }
+  return map;
 }
 
 // Company page icons → { client, kind: 'file'|'external', url, version }.

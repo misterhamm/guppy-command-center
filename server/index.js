@@ -82,6 +82,32 @@ app.patch('/api/tasks/:id', async (req, res) => {
 // the browser; the logos route serves cached bytes instead.
 const stripLogo = p => { const { logo, ...rest } = p; return rest; };
 
+// Delete (archive) a task; restore backs the toast Undo.
+const mockDeleted = new Map();
+app.delete('/api/tasks/:id', async (req, res) => {
+  if (notion.configured()) {
+    try { await notion.setTaskArchived(req.params.id, true); cache.delete('tasks'); return res.json({ ok: true, source: 'notion' }); }
+    catch (e) { console.error('[notion] archive failed:', e.message); return res.status(502).json({ error: String(e.message || e) }); }
+  }
+  const i = tasks.findIndex(x => x.id === req.params.id);
+  if (i < 0) return res.status(404).json({ error: 'not found' });
+  mockDeleted.set(req.params.id, tasks[i]);
+  tasks.splice(i, 1);
+  res.json({ ok: true, source: 'mock' });
+});
+
+app.post('/api/tasks/:id/restore', async (req, res) => {
+  if (notion.configured()) {
+    try { await notion.setTaskArchived(req.params.id, false); cache.delete('tasks'); return res.json({ ok: true, source: 'notion' }); }
+    catch (e) { console.error('[notion] restore failed:', e.message); return res.status(502).json({ error: String(e.message || e) }); }
+  }
+  const t = mockDeleted.get(req.params.id);
+  if (!t) return res.status(404).json({ error: 'not found' });
+  mockDeleted.delete(req.params.id);
+  tasks.push(t);
+  res.json({ ok: true, source: 'mock' });
+});
+
 app.get('/api/projects', async (_req, res) => {
   if (notion.configured()) {
     try { return res.json({ projects: (await cached('projects', () => notion.getProjects())).map(stripLogo), source: 'notion' }); }
@@ -102,6 +128,16 @@ app.patch('/api/projects/:id', async (req, res) => {
   if ('statusText' in b) p.statusText = b.statusText;
   if ('concernsText' in b) p.concerns = String(b.concernsText || '').split(/\n+/).map(s => s.trim()).filter(Boolean).map(text => ({ text, tone: 'mute' }));
   res.json({ project: p, source: 'mock' });
+});
+
+// Client-name shorthands (e.g. BSG → Bridgespan Group), managed in Notion via
+// the Companies "Aliases" property.
+app.get('/api/aliases', async (_req, res) => {
+  if (notion.configured()) {
+    try { return res.json({ aliases: await cached('aliases', () => notion.getClientAliases()), source: 'notion' }); }
+    catch (e) { console.error('[notion] getClientAliases failed:', e.message); return res.json({ aliases: {}, source: 'error' }); }
+  }
+  res.json({ aliases: {}, source: 'mock' });
 });
 
 app.get('/api/calendar', async (_req, res) => {

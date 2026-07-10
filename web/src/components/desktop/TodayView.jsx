@@ -14,7 +14,7 @@ function sweptToday() {
 
 export default function TodayView() {
   const store = useStore();
-  const { tasks, projects, calendar, todayISO, nowMin, tomorrowISO, P, setView, showToast, snoozeTask } = store;
+  const { tasks, projects, calendar, todayISO, nowMin, tomorrowISO, nextMonISO, P, setView, showToast, snoozeTask } = store;
   const { setEvId, setMenu, listIdsRef } = useDesk();
 
   const groups = todayGroups(tasks, todayISO);
@@ -71,12 +71,27 @@ export default function TodayView() {
               );
             })}
           </div>
-          <div
-            onClick={() => { sweepIncluded.forEach(t => snoozeTask(t.id, tomorrowISO, 'Tomorrow')); markSweepDone(); showToast(`Snoozed ${sweepIncluded.length} to tomorrow — see you then.`); }}
-            tabIndex={0}
-            className="hover-green-bg"
-            style={{ marginTop: 10, display: 'inline-block', background: 'var(--green)', color: '#fff', fontWeight: 700, fontSize: 12.5, padding: '7px 14px', borderRadius: 8, cursor: 'pointer' }}
-          >Snooze {sweepIncluded.length} to tomorrow</div>
+          {(() => {
+            // On Friday (or the weekend) Monday is the sensible landing spot
+            const dow = dIso(todayISO).getDay();
+            const weekEnd = dow === 5 || dow === 6 || dow === 0;
+            const sweepTo = (iso, label) => { sweepIncluded.forEach(t => snoozeTask(t.id, iso, label)); markSweepDone(); showToast(`Snoozed ${sweepIncluded.length} to ${label} — see you then.`); };
+            return (
+              <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                {weekEnd && (
+                  <div onClick={() => sweepTo(nextMonISO, 'Monday')} tabIndex={0} className="hover-green-bg" style={{ background: 'var(--green)', color: '#fff', fontWeight: 700, fontSize: 12.5, padding: '7px 14px', borderRadius: 8, cursor: 'pointer' }}>Snooze {sweepIncluded.length} until Monday</div>
+                )}
+                <div
+                  onClick={() => sweepTo(tomorrowISO, 'tomorrow')}
+                  tabIndex={0}
+                  className={weekEnd ? 'hover-green' : 'hover-green-bg'}
+                  style={weekEnd
+                    ? { background: 'var(--card)', color: 'var(--soft)', border: '1px solid var(--line2)', fontWeight: 700, fontSize: 12.5, padding: '6px 14px', borderRadius: 8, cursor: 'pointer' }
+                    : { background: 'var(--green)', color: '#fff', fontWeight: 700, fontSize: 12.5, padding: '7px 14px', borderRadius: 8, cursor: 'pointer' }}
+                >Snooze {sweepIncluded.length} to tomorrow</div>
+              </div>
+            );
+          })()}
         </div>
       )}
 

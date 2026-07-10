@@ -67,13 +67,18 @@ export function clientsMap(projects, tasks) {
 const DOW = { sun: 0, mon: 1, tue: 2, tues: 2, wed: 3, thu: 4, thur: 4, thurs: 4, fri: 5, sat: 6 };
 const PRIO_WORDS = { asap: 'ASAP', high: 'High', now: 'Now', soon: 'Soon', someday: 'Someday' };
 
-export function parseQuickAdd(text, clients, todayISO) {
+export function parseQuickAdd(text, clients, todayISO, aliases = {}) {
   const out = { client: '', project: '', dueISO: '', priority: '', detected: [] };
   if (!text) return { ...out, cleanName: '' };
   const kept = [];
   const words = text.split(/\s+/);
   const clientKeys = Object.keys(clients || {});
   const tomorrow = addDays(todayISO, 1);
+  const pickClient = name => {
+    out.client = name;
+    out.detected.push(name);
+    if ((clients[name] || []).length === 1) out.project = clients[name][0];
+  };
   for (const w of words) {
     const lw = w.toLowerCase().replace(/[.,!]+$/, '');
     if (!out.priority && PRIO_WORDS[lw]) { out.priority = PRIO_WORDS[lw]; out.detected.push(PRIO_WORDS[lw].toUpperCase()); continue; }
@@ -89,12 +94,11 @@ export function parseQuickAdd(text, clients, todayISO) {
       continue;
     }
     if (!out.client) {
+      // shorthand from Notion Companies "Aliases" first (e.g. bsg → Bridgespan Group)
+      const canonical = aliases[lw];
+      if (canonical && clients[canonical]) { pickClient(canonical); continue; }
       const hit = clientKeys.find(c => c.toLowerCase().split(/\s+/)[0] === lw && lw.length >= 4);
-      if (hit) {
-        out.client = hit; out.detected.push(hit);
-        if ((clients[hit] || []).length === 1) out.project = clients[hit][0];
-        continue;
-      }
+      if (hit) { pickClient(hit); continue; }
     }
     kept.push(w);
   }

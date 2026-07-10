@@ -52,6 +52,7 @@ export function StoreProvider({ children }) {
   const [toast, setToast] = useState(null);
   // { clients: {name: url}, projects: {projectId: url} } — project wins
   const [logos, setLogos] = useState({ clients: {}, projects: {} });
+  const [aliases, setAliases] = useState({});
   const [qa, setQa] = useState(EMPTY_QA);
   const [guppyMsgs, setGuppyMsgs] = useState([]);
   const [guppyBusy, setGuppyBusy] = useState(false);
@@ -70,8 +71,17 @@ export function StoreProvider({ children }) {
   }, []);
 
   // ---- text size ----
+  // Zoom #root and divide its height by the scale so the zoomed shell is
+  // exactly one viewport tall — no double scrollbars, mobile bottom bar stays
+  // pinned. (Zooming <html> made 100vh overshoot the viewport by the scale.)
   const [textScale, setTextScaleState] = useState(initialTextScale);
-  useEffect(() => { document.documentElement.style.zoom = textScale; }, [textScale]);
+  useEffect(() => {
+    const root = document.getElementById('root');
+    if (!root) return;
+    root.style.zoom = textScale;
+    root.style.height = `calc(100vh / ${textScale})`;
+    root.style.height = `calc(100dvh / ${textScale})`; // ignored where dvh unsupported
+  }, [textScale]);
   const cycleTextScale = useCallback(() => {
     setTextScaleState(cur => {
       const next = TEXT_SCALES[(TEXT_SCALES.indexOf(cur) + 1) % TEXT_SCALES.length];
@@ -115,6 +125,7 @@ export function StoreProvider({ children }) {
     if (cRes.status === 'fulfilled') setCalendar(cRes.value.weeks);
     else gcalOk = false;
     api.getLogos().then(r => setLogos(r.logos)).catch(() => { /* logos are cosmetic */ });
+    api.getAliases().then(r => setAliases(r.aliases)).catch(() => { /* shorthand only */ });
     setOutage(!notionOk ? 'notion' : !gcalOk ? 'gcal' : null);
     if (notionOk && gcalOk) setSyncedAt(Date.now());
     setReady(true);
@@ -172,6 +183,23 @@ export function StoreProvider({ children }) {
     showToast(ok ? 'Saved to Notion ✓' : 'Still unreachable — will keep retrying');
   }, [writeTask, showToast]);
 
+  // Delete = archive in Notion; Undo restores it.
+  const deleteTask = useCallback(async (id) => {
+    const t = tasksRef.current.find(x => x.id === id);
+    if (!t) return;
+    setTasks(s => s.filter(x => x.id !== id));
+    try {
+      await api.deleteTask(id);
+      showToast('Task deleted', 'Undo', async () => {
+        setTasks(s => [...s, t]);
+        try { await api.restoreTask(id); } catch (e) { patchLocal(id, { syncFailed: true }); }
+      });
+    } catch (e) {
+      setTasks(s => [...s, t]);
+      showToast("Couldn't reach Notion — task kept");
+    }
+  }, [patchLocal, showToast]);
+
   const snoozeTask = useCallback((id, iso, label) => {
     const t = tasksRef.current.find(x => x.id === id);
     const prev = t ? t.dueISO : '';
@@ -228,7 +256,7 @@ export function StoreProvider({ children }) {
   const clients = useMemo(() => clientsMap(projects, tasks), [projects, tasks]);
 
   const effectiveQa = useCallback(() => {
-    const parsed = parseQuickAdd(qa.name, clients, todayISO);
+    const parsed = parseQuickAdd(qa.name, clients, todayISO, aliases);
     return {
       parsed,
       client: qa.client || parsed.client,
@@ -237,7 +265,7 @@ export function StoreProvider({ children }) {
       priority: qa.priority !== 'Soon' ? qa.priority : (parsed.priority || 'Soon'),
       name: parsed.detected.length && parsed.cleanName ? parsed.cleanName : qa.name
     };
-  }, [qa, clients, todayISO]);
+  }, [qa, clients, todayISO, aliases]);
 
   const qaSet = useCallback(patch => setQa(s => ({ ...s, ...patch })), []);
   const qaReset = useCallback(() => setQa(EMPTY_QA), []);
@@ -344,8 +372,8 @@ export function StoreProvider({ children }) {
     fmtShort,
     syncedAgo, outage, refresh,
     toast, showToast, dismissToast,
-    toggleTask, retryTask, snoozeTask, saveTask,
-    saveProject, uploadLogo, logos, logoFor,
+    toggleTask, retryTask, snoozeTask, saveTask, deleteTask,
+    saveProject, uploadLogo, logos, logoFor, aliases,
     qa, qaSet, qaReset, qaPrefill, qaAdd, effectiveQa,
     radarOrder, moveProjectTo, moveProjectBy, persistOrder,
     guppyMsgs, guppySend, guppyBusy,

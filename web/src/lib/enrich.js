@@ -75,6 +75,6 @@ export function eventView(ev, kind, P) {
     locLabel: ev.location || 'No room',
     hasJoin: !!ev.join && kind !== 'past',
     join: ev.join,
-    joinUrl: JOIN_URLS[ev.join] || '#'
+    joinUrl: ev.joinUrl || JOIN_URLS[ev.join] || '#'
   };
 }

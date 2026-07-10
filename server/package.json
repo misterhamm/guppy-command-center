@@ -9,6 +9,9 @@
     "dev": "node index.js"
   },
   "dependencies": {
-    "express": "^4.19.2"
+    "@notionhq/client": "^2.2.15",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "google-auth-library": "^9.14.1"
   }
 }

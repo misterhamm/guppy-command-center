@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import { buildTasks, buildProjects, buildCalendar } from './mockData.js';
 import * as notion from './sources/notion.js';
@@ -6,6 +7,18 @@ import * as guppy from './sources/guppy.js';
 
 const app = express();
 app.use(express.json());
+
+// Short TTL cache so the client's 2–5 min polling (and StrictMode double
+// fetches) don't hammer Notion/Google. Writes invalidate the tasks cache.
+const CACHE_MS = 45000;
+const cache = new Map();
+async function cached(key, fn) {
+  const hit = cache.get(key);
+  if (hit && Date.now() - hit.at < CACHE_MS) return hit.value;
+  const value = await fn();
+  cache.set(key, { at: Date.now(), value });
+  return value;
+}
 
 // In-memory state for the mock source. Real sources bypass this — Notion is the
 // source of truth once wired.
@@ -16,8 +29,8 @@ app.get('/api/health', (_req, res) => res.json({ ok: true, sources: { notion: no
 
 app.get('/api/tasks', async (_req, res) => {
   if (notion.configured()) {
-    try { return res.json({ tasks: await notion.getTasks(), source: 'notion' }); }
-    catch (e) { return res.status(502).json({ error: String(e.message || e) }); }
+    try { return res.json({ tasks: await cached('tasks', () => notion.getTasks()), source: 'notion' }); }
+    catch (e) { console.error('[notion] getTasks failed:', e.message); return res.status(502).json({ error: String(e.message || e) }); }
   }
   res.json({ tasks, source: 'mock' });
 });
@@ -26,8 +39,8 @@ app.post('/api/tasks', async (req, res) => {
   const b = req.body || {};
   if (!b.name || typeof b.name !== 'string') return res.status(400).json({ error: 'name required' });
   if (notion.configured()) {
-    try { return res.json({ task: await notion.createTask(b), source: 'notion' }); }
-    catch (e) { return res.status(502).json({ error: String(e.message || e) }); }
+    try { const task = await notion.createTask(b); cache.delete('tasks'); return res.json({ task, source: 'notion' }); }
+    catch (e) { console.error('[notion] createTask failed:', e.message); return res.status(502).json({ error: String(e.message || e) }); }
   }
   const task = {
     id: 'n' + Date.now(),
@@ -48,8 +61,8 @@ app.post('/api/tasks', async (req, res) => {
 
 app.patch('/api/tasks/:id', async (req, res) => {
   if (notion.configured()) {
-    try { return res.json({ task: await notion.updateTask(req.params.id, req.body || {}), source: 'notion' }); }
-    catch (e) { return res.status(502).json({ error: String(e.message || e) }); }
+    try { const task = await notion.updateTask(req.params.id, req.body || {}); cache.delete('tasks'); return res.json({ task, source: 'notion' }); }
+    catch (e) { console.error('[notion] updateTask failed:', e.message); return res.status(502).json({ error: String(e.message || e) }); }
   }
   const t = tasks.find(x => x.id === req.params.id);
   if (!t) return res.status(404).json({ error: 'not found' });
@@ -62,16 +75,16 @@ app.patch('/api/tasks/:id', async (req, res) => {
 
 app.get('/api/projects', async (_req, res) => {
   if (notion.configured()) {
-    try { return res.json({ projects: await notion.getProjects(), source: 'notion' }); }
-    catch (e) { return res.status(502).json({ error: String(e.message || e) }); }
+    try { return res.json({ projects: await cached('projects', () => notion.getProjects()), source: 'notion' }); }
+    catch (e) { console.error('[notion] getProjects failed:', e.message); return res.status(502).json({ error: String(e.message || e) }); }
   }
   res.json({ projects, source: 'mock' });
 });
 
 app.get('/api/calendar', async (_req, res) => {
   if (gcal.configured()) {
-    try { return res.json({ weeks: await gcal.getCalendar(), source: 'gcal' }); }
-    catch (e) { return res.status(502).json({ error: String(e.message || e) }); }
+    try { return res.json({ weeks: await cached('calendar', () => gcal.getCalendar()), source: 'gcal' }); }
+    catch (e) { console.error('[gcal] getCalendar failed:', e.message); return res.status(502).json({ error: String(e.message || e) }); }
   }
   res.json({ weeks: buildCalendar(), source: 'mock' });
 });

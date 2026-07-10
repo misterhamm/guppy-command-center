@@ -1,19 +1,108 @@
-// Google Calendar adapter — NOT WIRED YET (no credentials until this is deployed
-// on the Hermes/Guppy server). When wiring:
+// Google Calendar adapter — work calendar, read-only, via a service account.
 //
-//   - Work calendar only, read-only. Server-side OAuth/service credentials —
-//     never sent to the browser.
-//   - Serve this week + next week (Mon–Fri) in the shape mockData.buildCalendar
-//     returns: { this: [{ iso, events: [...] }], next: [...] }.
-//   - Event shape: { id, title, startMin, endMin, location, join, attendees,
-//     agenda, client, project, tag? }. Extract conferencing links (Meet/Zoom/
-//     Teams) into `join` + `joinUrl`. Events titled "Placeholder: …" get
-//     tag: 'PLACEHOLDER'.
+// Env: GOOGLE_CALENDAR_ID (the calendar's ID, usually your email address) and
+// GOOGLE_SERVICE_ACCOUNT_KEY (path to the downloaded JSON key file;
+// GOOGLE_APPLICATION_CREDENTIALS also accepted). The calendar must be shared
+// with the service account's email with "See all event details".
 //
-// Set GOOGLE_CALENDAR_ID + credentials via env.
+// Serves this week + next week (Mon–Fri) in the same shape as
+// mockData.buildCalendar. All-day events are skipped (the agenda is a timed
+// meeting view). Events titled "Placeholder: …" get tag PLACEHOLDER.
+// Conferencing links are extracted into join/joinUrl for the join chips.
 
-export const configured = () => !!process.env.GOOGLE_CALENDAR_ID;
+import fs from 'node:fs';
+import { JWT } from 'google-auth-library';
+
+const keyPath = () => process.env.GOOGLE_SERVICE_ACCOUNT_KEY || process.env.GOOGLE_APPLICATION_CREDENTIALS;
+export const configured = () => !!(process.env.GOOGLE_CALENDAR_ID && keyPath());
+
+let _auth = null;
+function auth() {
+  if (!_auth) {
+    const key = JSON.parse(fs.readFileSync(keyPath(), 'utf8'));
+    _auth = new JWT({
+      email: key.client_email,
+      key: key.private_key,
+      scopes: ['https://www.googleapis.com/auth/calendar.readonly']
+    });
+  }
+  return _auth;
+}
+
+const localISO = d => [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0')].join('-');
+
+function mondayOfThisWeek() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  const dow = d.getDay(); // 0 Sun … 6 Sat
+  d.setDate(d.getDate() + (dow === 0 ? -6 : 1 - dow));
+  return d;
+}
+
+const URL_RE = /https?:\/\/[^\s<>"']+/;
+const firstUrl = s => { const m = URL_RE.exec(s || ''); return m ? m[0] : ''; };
+
+function detectJoin(ev) {
+  const video = (ev.conferenceData && ev.conferenceData.entryPoints || []).find(p => p.entryPointType === 'video');
+  const candidates = [ev.hangoutLink, video && video.uri, firstUrl(ev.location), firstUrl(ev.description)].filter(Boolean);
+  for (const url of candidates) {
+    if (url.includes('meet.google')) return { join: 'Meet', joinUrl: url };
+    if (url.includes('zoom.us')) return { join: 'Zoom', joinUrl: url };
+    if (url.includes('teams.microsoft') || url.includes('teams.live')) return { join: 'Teams', joinUrl: url };
+  }
+  return { join: '', joinUrl: '' };
+}
+
+const stripHtml = s => (s || '').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').trim();
+
+function normalizeEvent(ev) {
+  const start = new Date(ev.start.dateTime);
+  const end = new Date(ev.end.dateTime);
+  const title = ev.summary || '(no title)';
+  const tag = /^placeholder:/i.test(title) ? 'PLACEHOLDER' : undefined;
+  const attendees = (ev.attendees || [])
+    .filter(a => !a.resource)
+    .map(a => a.displayName || a.email)
+    .filter(Boolean);
+  const agenda = stripHtml(ev.description).slice(0, 800);
+  return {
+    id: ev.id,
+    title,
+    ...(tag ? { tag } : {}),
+    startMin: start.getHours() * 60 + start.getMinutes(),
+    endMin: end.getHours() * 60 + end.getMinutes(),
+    location: ev.location || '',
+    ...detectJoin(ev),
+    attendees: attendees.length ? attendees : ['You'],
+    agenda,
+    client: '',
+    project: ''
+  };
+}
 
 export async function getCalendar() {
-  throw new Error('Google Calendar source not configured');
+  const monday = mondayOfThisWeek();
+  const timeMin = monday.toISOString();
+  const timeMax = new Date(monday.getTime() + 12 * 86400000).toISOString(); // through next Fri
+  const res = await auth().request({
+    url: `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(process.env.GOOGLE_CALENDAR_ID)}/events`,
+    params: { timeMin, timeMax, singleEvents: 'true', orderBy: 'startTime', maxResults: '250' }
+  });
+  const items = (res.data.items || [])
+    .filter(ev => ev.status !== 'cancelled' && ev.start && ev.start.dateTime); // skip all-day + cancelled
+
+  const byDay = {};
+  for (const ev of items) {
+    const iso = localISO(new Date(ev.start.dateTime));
+    (byDay[iso] = byDay[iso] || []).push(normalizeEvent(ev));
+  }
+
+  const week = offset => [0, 1, 2, 3, 4].map(i => {
+    const d = new Date(monday.getTime());
+    d.setDate(d.getDate() + offset * 7 + i);
+    const iso = localISO(d);
+    return { iso, events: (byDay[iso] || []).sort((a, b) => a.startMin - b.startMin) };
+  });
+
+  return { this: week(0), next: week(1) };
 }

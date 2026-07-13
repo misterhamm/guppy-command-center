@@ -36,7 +36,7 @@ export default function MobileApp() {
 
   const { open, odCount, tdCount, attention } = taskCounts(tasks, todayISO);
 
-  const titles = { today: 'Today', todo: 'To-do', projects: 'Projects', calendar: 'Calendar' };
+  const titles = { today: 'Overview', todo: 'To-do', projects: 'Projects', calendar: 'Calendar' };
   const dateShort = dIso(todayISO).toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric' });
   const subs = {
     today: `${dateShort} · ${odCount} overdue, ${tdCount} due · synced ${syncedAgo ?? '–'}m ago`,
@@ -46,7 +46,7 @@ export default function MobileApp() {
   };
 
   const navDefs = [
-    { label: 'Today', view: 'today', count: String(attention) },
+    { label: 'Overview', view: 'today', count: String(attention) },
     { label: 'To-do', view: 'todo', count: String(open.length) },
     { label: 'Projects', view: 'projects', count: String(projects.length) },
     { label: 'Calendar', view: 'calendar', count: '' }

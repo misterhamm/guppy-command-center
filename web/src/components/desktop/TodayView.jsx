@@ -46,7 +46,7 @@ export default function TodayView() {
   return (
     <div style={{ padding: '22px 26px 90px' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 14 }}>
-        <div style={{ fontSize: 22, fontWeight: 800 }}>Today</div>
+        <div style={{ fontSize: 22, fontWeight: 800 }}>Overview</div>
         <div style={{ fontSize: 13, color: 'var(--faint)', fontWeight: 500 }}>{dateLine}</div>
         <div style={{ marginLeft: 'auto', fontSize: 12.5, color: 'var(--muted)' }}>{dayPart}, Chris — {odCount} overdue, {tdCount} due today.</div>
       </div>

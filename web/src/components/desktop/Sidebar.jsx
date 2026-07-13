@@ -11,7 +11,7 @@ export default function Sidebar({ anyFailed }) {
   const { open, attention } = taskCounts(tasks, todayISO);
   const now = nowBar(todayEvents(calendar, todayISO), nowMin);
   const nav = [
-    { label: 'Today', view: 'today', count: attention },
+    { label: 'Overview', view: 'today', count: attention },
     { label: 'To-do', view: 'todo', count: open.length },
     { label: 'Projects', view: 'projects', count: projects.length },
     { label: 'Calendar', view: 'calendar', count: '' }

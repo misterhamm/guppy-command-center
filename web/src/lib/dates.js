@@ -27,6 +27,11 @@ export function dueMeta(iso, todayISO) {
   return { label: fmtShort(iso), late: 0, isToday: false, has: true };
 }
 
+// Saturday of the current week (weeks run Sunday–Saturday)
+export function endOfWeekISO(todayISO) {
+  return addDays(todayISO, 6 - dIso(todayISO).getDay());
+}
+
 export function nextMonday(todayISO) {
   const dow = dIso(todayISO).getDay();
   let diff = (1 - dow + 7) % 7;

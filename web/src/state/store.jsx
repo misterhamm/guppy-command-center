@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { api } from '../api/client.js';
 import { THEMES } from '../lib/themes.js';
-import { localTodayISO, nowMinutes, addDays, nextMonday, fmtShort, dueMeta } from '../lib/dates.js';
+import { localTodayISO, nowMinutes, addDays, nextMonday, fmtShort, dueMeta, endOfWeekISO } from '../lib/dates.js';
 import { reconcileRadarOrder, clientsMap, parseQuickAdd, URGENT_PRIORITIES } from '../lib/logic.js';
 
 const StoreCtx = createContext(null);
@@ -291,15 +291,20 @@ export function StoreProvider({ children }) {
       notes: qa.notes
     };
     const dm = dueMeta(body.dueISO, todayISO);
-    const landsOnToday = dm.isToday || dm.late > 0 || URGENT_PRIORITIES.includes(prio);
+    const dueThisWeek = !!body.dueISO && body.dueISO > todayISO && body.dueISO <= endOfWeekISO(todayISO);
+    const landsOnOverview = dm.isToday || dm.late > 0 || dueThisWeek || URGENT_PRIORITIES.includes(prio);
     const tempId = 'tmp' + Date.now();
     setTasks(s => [...s, { id: tempId, ...body, done: false, justDone: false, sort: 99, status: 'Not Started' }]);
     qaReset();
     api.createTask(body)
       .then(res => setTasks(s => s.map(t => (t.id === tempId ? { ...res.task, justDone: false } : t))))
       .catch(() => setTasks(s => s.map(t => (t.id === tempId ? { ...t, syncFailed: true } : t))));
-    if (view === 'today' && !landsOnToday) {
-      showToast('Added ✓ — no due date, so it lives in To-do', 'View in To-do', () => setView('todo'));
+    if (view === 'today' && !landsOnOverview) {
+      showToast(
+        body.dueISO ? `Added ✓ — due ${dm.label}, it lives in To-do` : 'Added ✓ — no due date, so it lives in To-do',
+        'View in To-do',
+        () => setView('todo')
+      );
     } else {
       showToast('Added ✓ — saved to Notion');
     }

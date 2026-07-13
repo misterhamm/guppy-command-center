@@ -72,7 +72,8 @@ async function projMap() {
     last: findProp(P, ['date'], [/last/i]),
     next: findProp(P, ['date'], [/next/i]),
     statusText: findProp(P, ['rich_text'], [/status text/i, /current status/i, /summary/i, /update/i, /^status\b/i]),
-    logo: findProp(P, ['files'], [/logo/i, /image/i])
+    logo: findProp(P, ['files'], [/logo/i, /image/i]),
+    aliases: findProp(P, ['rich_text'], [/alias/i, /aka/i, /shorthand/i])
   };
   console.log('[notion] project property map:', Object.fromEntries(Object.entries(_projMap).map(([k, v]) => [k, v ? v.name : '(none)'])));
   return _projMap;
@@ -293,6 +294,7 @@ async function normalizeProject(page, m) {
     lastISO,
     nextISO: readProp(page, m.next) || fallbackNext.toISOString().slice(0, 10),
     statusText: readProp(page, m.statusText) || '',
+    aliases: (readProp(page, m.aliases) || '').split(/[,;\n]+/).map(s => s.trim()).filter(Boolean),
     logo
   };
 }

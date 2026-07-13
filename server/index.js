@@ -6,6 +6,7 @@ dotenv({ path: path.join(path.dirname(fileURLToPath(import.meta.url)), '.env') }
 
 import express from 'express';
 import { todayISO as tzTodayISO, TZ } from './tz.js';
+import { buildEventMatcher } from './matcher.js';
 import { buildTasks, buildProjects, buildCalendar } from './mockData.js';
 import * as notion from './sources/notion.js';
 import * as gcal from './sources/gcal.js';
@@ -143,7 +144,23 @@ app.get('/api/aliases', async (_req, res) => {
 
 app.get('/api/calendar', async (_req, res) => {
   if (gcal.configured()) {
-    try { return res.json({ weeks: await cached('calendar', () => gcal.getCalendar()), source: 'gcal' }); }
+    try {
+      let weeks = await cached('calendar', () => gcal.getCalendar());
+      // Link events to clients/projects via names + Notion aliases
+      if (notion.configured()) {
+        try {
+          const [projs, aliases] = await Promise.all([
+            cached('projects', () => notion.getProjects()),
+            cached('aliases', () => notion.getClientAliases())
+          ]);
+          const match = buildEventMatcher(projs, aliases);
+          weeks = Object.fromEntries(Object.entries(weeks).map(([wk, days]) =>
+            [wk, days.map(d => ({ ...d, events: d.events.map(match) }))]
+          ));
+        } catch (e) { console.error('[matcher] skipped:', e.message); }
+      }
+      return res.json({ weeks, source: 'gcal' });
+    }
     catch (e) { console.error('[gcal] getCalendar failed:', e.message); return res.status(502).json({ error: String(e.message || e) }); }
   }
   res.json({ weeks: buildCalendar(), source: 'mock' });

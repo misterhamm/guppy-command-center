@@ -2,13 +2,9 @@
 // the real clock so the dashboard always looks alive. Offsets below are relative
 // to "today" and mirror the handoff's pinned TODAY_ISO of 2026-07-08.
 
-const MS = 86400000;
+import { todayISO as localToday, addDaysISO as addDays, dowOf } from './tz.js';
+
 const dIso = iso => new Date(iso + 'T12:00:00');
-const localToday = () => {
-  const d = new Date();
-  return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0')].join('-');
-};
-const addDays = (iso, n) => { const d = dIso(iso); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
 
 const TASK_SEEDS = [
   { id: 't1', name: 'Send Borax sitemap revisions', client: 'Borax', project: 'Site Rebuild', dueOff: -5, priority: 'HIGH', personal: false, done: false, sort: 0, status: 'In Progress', notes: 'Dana wants the /resources section flattened; confirm before resending.' },
@@ -92,7 +88,7 @@ export function buildProjects() {
 
 export function buildCalendar() {
   const today = localToday();
-  const dow = dIso(today).getDay(); // 0 Sun … 6 Sat
+  const dow = dowOf(today); // 0 Sun … 6 Sat
   const monday = addDays(today, dow === 0 ? -6 : 1 - dow);
   const week = (startIso, eventsByDay, keyPrefix) =>
     [0, 1, 2, 3, 4].map(i => {

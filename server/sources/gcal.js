@@ -12,6 +12,7 @@
 
 import fs from 'node:fs';
 import { JWT } from 'google-auth-library';
+import { isoInTz, minutesInTz, mondayOfThisWeekISO, addDaysISO } from '../tz.js';
 
 const keyPath = () => process.env.GOOGLE_SERVICE_ACCOUNT_KEY || process.env.GOOGLE_APPLICATION_CREDENTIALS;
 export const configured = () => !!(process.env.GOOGLE_CALENDAR_ID && keyPath());
@@ -27,16 +28,6 @@ function auth() {
     });
   }
   return _auth;
-}
-
-const localISO = d => [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0')].join('-');
-
-function mondayOfThisWeek() {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  const dow = d.getDay(); // 0 Sun … 6 Sat
-  d.setDate(d.getDate() + (dow === 0 ? -6 : 1 - dow));
-  return d;
 }
 
 const URL_RE = /https?:\/\/[^\s<>"']+/;
@@ -56,6 +47,8 @@ function detectJoin(ev) {
 const stripHtml = s => (s || '').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').trim();
 
 function normalizeEvent(ev) {
+  // startMin/endMin are minutes since midnight in the DASHBOARD timezone —
+  // never the host machine's (a UTC VPS would shift every event otherwise).
   const start = new Date(ev.start.dateTime);
   const end = new Date(ev.end.dateTime);
   const title = ev.summary || '(no title)';
@@ -70,8 +63,8 @@ function normalizeEvent(ev) {
     id: ev.id,
     title,
     ...(tag ? { tag } : {}),
-    startMin: start.getHours() * 60 + start.getMinutes(),
-    endMin: end.getHours() * 60 + end.getMinutes(),
+    startMin: minutesInTz(start),
+    endMin: minutesInTz(end),
     location: ev.location || '',
     ...detectJoin(ev),
     attendees: attendees.length ? attendees : ['You'],
@@ -82,9 +75,10 @@ function normalizeEvent(ev) {
 }
 
 export async function getCalendar() {
-  const monday = mondayOfThisWeek();
-  const timeMin = monday.toISOString();
-  const timeMax = new Date(monday.getTime() + 12 * 86400000).toISOString(); // through next Fri
+  const mondayISO = mondayOfThisWeekISO();
+  // Query bounds anchored to dashboard-TZ midnight (offset generous by design)
+  const timeMin = new Date(mondayISO + 'T00:00:00-12:00').toISOString();
+  const timeMax = new Date(addDaysISO(mondayISO, 12) + 'T00:00:00+12:00').toISOString();
   const res = await auth().request({
     url: `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(process.env.GOOGLE_CALENDAR_ID)}/events`,
     params: { timeMin, timeMax, singleEvents: 'true', orderBy: 'startTime', maxResults: '250' }
@@ -94,14 +88,12 @@ export async function getCalendar() {
 
   const byDay = {};
   for (const ev of items) {
-    const iso = localISO(new Date(ev.start.dateTime));
+    const iso = isoInTz(new Date(ev.start.dateTime)); // bucket by dashboard-TZ day
     (byDay[iso] = byDay[iso] || []).push(normalizeEvent(ev));
   }
 
   const week = offset => [0, 1, 2, 3, 4].map(i => {
-    const d = new Date(monday.getTime());
-    d.setDate(d.getDate() + offset * 7 + i);
-    const iso = localISO(d);
+    const iso = addDaysISO(mondayISO, offset * 7 + i);
     return { iso, events: (byDay[iso] || []).sort((a, b) => a.startMin - b.startMin) };
   });
 

@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 dotenv({ path: path.join(path.dirname(fileURLToPath(import.meta.url)), '.env') });
 
 import express from 'express';
+import { todayISO as tzTodayISO, TZ } from './tz.js';
 import { buildTasks, buildProjects, buildCalendar } from './mockData.js';
 import * as notion from './sources/notion.js';
 import * as gcal from './sources/gcal.js';
@@ -271,8 +272,7 @@ app.post('/api/logos', async (req, res) => {
 // endpoint is reachable — see sources/guppy.js.
 function cannedReply(text) {
   const open = tasks.filter(t => !t.done);
-  const today = new Date();
-  const todayIso = [today.getFullYear(), String(today.getMonth() + 1).padStart(2, '0'), String(today.getDate()).padStart(2, '0')].join('-');
+  const todayIso = tzTodayISO();
   const od = open.filter(t => t.dueISO && t.dueISO < todayIso).length;
   const td = open.filter(t => t.dueISO === todayIso).length;
   const lower = (text || '').toLowerCase();
@@ -293,4 +293,4 @@ app.post('/api/guppy/chat', async (req, res) => {
 });
 
 const port = process.env.PORT || 8787;
-app.listen(port, () => console.log(`Command Center API listening on http://localhost:${port} (sources: notion=${notion.configured()}, gcal=${gcal.configured()}, guppy=${guppy.configured()})`));
+app.listen(port, () => console.log(`Command Center API listening on http://localhost:${port} (tz: ${TZ}, sources: notion=${notion.configured()}, gcal=${gcal.configured()}, guppy=${guppy.configured()})`));

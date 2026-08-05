@@ -164,7 +164,7 @@ app.get('/api/calendar', async (_req, res) => {
     }
     catch (e) { console.error('[gcal] getCalendar failed:', e.message); return res.status(502).json({ error: String(e.message || e) }); }
   }
-  res.json({ weeks: buildCalendar(), source: 'mock' );
+  res.json({ weeks: buildCalendar(), source: 'mock' });
 });
 
 // Gmail inbox — read-only, personal OAuth token.

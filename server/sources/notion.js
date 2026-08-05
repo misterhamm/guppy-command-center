@@ -17,12 +17,32 @@ const projectsDb = () => process.env.NOTION_PROJECTS_DB_ID;
 
 export const configured = () => !!(process.env.NOTION_TOKEN && tasksDb() && projectsDb());
 
+async function notion(path, opts = {}) {
+  const url = 'https://api.notion.com/v1/' + path;
+  const res = await fetch(url, {
+    method: opts.method || 'GET',
+    headers: {
+      'Authorization': 'Bearer ' + process.env.NOTION_TOKEN,
+      'Notion-Version': '2025-09-03',
+      'Content-Type': 'application/json'
+    },
+    body: opts.body ? JSON.stringify(opts.body) : undefined
+  });
+  if (!res.ok) {
+    const e = await res.json();
+    const err = new Error(e.message || 'Notion request failed');
+    Object.assign(err, e);
+    throw err;
+  }
+  return res.json();
+}
+
 // ---------- schema discovery ----------
 
 const schemaCache = new Map();
 async function schema(dbId) {
   if (!schemaCache.has(dbId)) {
-    const db = await client().databases.retrieve({ database_id: dbId });
+    const db = await notion('data_sources/' + dbId);
     schemaCache.set(dbId, db.properties);
   }
   return schemaCache.get(dbId);
@@ -145,7 +165,7 @@ async function queryAll(database_id) {
   const results = [];
   let cursor;
   do {
-    const res = await client().databases.query({ database_id, start_cursor: cursor, page_size: 100 });
+    const res = await notion('data_sources/' + database_id + '/query', { method: 'POST', body: { start_cursor: cursor, page_size: 100 } });
     results.push(...res.results);
     cursor = res.has_more ? res.next_cursor : undefined;
   } while (cursor);

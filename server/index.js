@@ -10,6 +10,7 @@ import { buildEventMatcher } from './matcher.js';
 import { buildTasks, buildProjects, buildCalendar } from './mockData.js';
 import * as notion from './sources/notion.js';
 import * as gcal from './sources/gcal.js';
+import * as gmail from './sources/gmail.js';
 import * as guppy from './sources/guppy.js';
 
 const app = express();
@@ -32,7 +33,7 @@ async function cached(key, fn) {
 let tasks = buildTasks();
 let projects = buildProjects();
 
-app.get('/api/health', (_req, res) => res.json({ ok: true, sources: { notion: notion.configured(), gcal: gcal.configured(), guppy: guppy.configured() } }));
+app.get('/api/health', (_req, res) => res.json({ ok: true, sources: { notion: notion.configured(), gcal: gcal.configured(), gmail: gmail.configured(), guppy: guppy.configured() } }));
 
 app.get('/api/tasks', async (_req, res) => {
   if (notion.configured()) {
@@ -163,7 +164,21 @@ app.get('/api/calendar', async (_req, res) => {
     }
     catch (e) { console.error('[gcal] getCalendar failed:', e.message); return res.status(502).json({ error: String(e.message || e) }); }
   }
-  res.json({ weeks: buildCalendar(), source: 'mock' });
+  res.json({ weeks: buildCalendar(), source: 'mock' );
+});
+
+// Gmail inbox — read-only, personal OAuth token.
+app.get('/api/gmail', async (_req, res) => {
+  if (gmail.configured()) {
+    try {
+      const emails = await gmail.getInbox({ maxResults: 20 });
+      return res.json({ emails, source: 'gmail' });
+    } catch (e) {
+      console.error('[gmail] getInbox failed:', e.message);
+      return res.status(502).json({ error: String(e.message || e) });
+    }
+  }
+  res.json({ emails: [], source: 'unconfigured' });
 });
 
 // ---- company logos ----

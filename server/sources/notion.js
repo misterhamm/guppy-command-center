@@ -37,15 +37,46 @@ async function notion(path, opts = {}) {
   return res.json();
 }
 
+function isNotFoundLike(e) {
+  return e && (e.status === 400 || e.status === 404 || e.code === 'object_not_found' || e.code === 'validation_error');
+}
+
+const dataSourceIdCache = new Map();
+const dataSourceObjectCache = new Map();
+
+async function resolveDataSourceId(id) {
+  if (!id) return id;
+  if (dataSourceIdCache.has(id)) return dataSourceIdCache.get(id);
+  try {
+    const source = await notion('data_sources/' + id);
+    dataSourceIdCache.set(id, source.id);
+    dataSourceObjectCache.set(source.id, source);
+    return source.id;
+  } catch (e) {
+    if (!isNotFoundLike(e)) throw e;
+  }
+
+  const db = await notion('databases/' + id);
+  const sources = db.data_sources || [];
+  if (!sources.length) throw new Error(`Notion database ${id} has no data sources`);
+  if (sources.length > 1) {
+    console.warn(`[notion] database ${id} has ${sources.length} data sources; using "${sources[0].name}". Set the env var to a specific data source ID if that is not the right table.`);
+  }
+  dataSourceIdCache.set(id, sources[0].id);
+  return sources[0].id;
+}
+
 // ---------- schema discovery ----------
 
 const schemaCache = new Map();
-async function schema(dbId) {
-  if (!schemaCache.has(dbId)) {
-    const db = await notion('data_sources/' + dbId);
-    schemaCache.set(dbId, db.properties);
+async function schema(dbOrSourceId) {
+  const sourceId = await resolveDataSourceId(dbOrSourceId);
+  if (!schemaCache.has(sourceId)) {
+    const source = dataSourceObjectCache.get(sourceId) || await notion('data_sources/' + sourceId);
+    dataSourceObjectCache.set(sourceId, source);
+    schemaCache.set(sourceId, source.properties);
   }
-  return schemaCache.get(dbId);
+  return schemaCache.get(sourceId);
 }
 
 function findProp(props, types, patterns, { fallbackFirstOfType = false } = {}) {
@@ -162,10 +193,11 @@ async function pageIdForTitle(name) {
 }
 
 async function queryAll(database_id) {
+  const data_source_id = await resolveDataSourceId(database_id);
   const results = [];
   let cursor;
   do {
-    const res = await notion('data_sources/' + database_id + '/query', { method: 'POST', body: { start_cursor: cursor, page_size: 100 } });
+    const res = await notion('data_sources/' + data_source_id + '/query', { method: 'POST', body: { start_cursor: cursor, page_size: 100 } });
     results.push(...res.results);
     cursor = res.has_more ? res.next_cursor : undefined;
   } while (cursor);
@@ -243,7 +275,7 @@ async function buildTaskProperties(patch, m) {
 export async function createTask(body) {
   const m = await taskMap();
   const properties = await buildTaskProperties({ status: 'Not Started', ...body }, m);
-  const page = await client().pages.create({ parent: { database_id: tasksDb() }, properties });
+  const page = await notion('pages', { method: 'POST', body: { parent: { data_source_id: await resolveDataSourceId(tasksDb()) }, properties } });
   return normalizeTask(page, m, 999);
 }
 
@@ -331,11 +363,11 @@ export async function getProjects() {
 
 let _companiesDb = null;
 async function companiesDb() {
-  if (process.env.NOTION_COMPANIES_DB_ID) return process.env.NOTION_COMPANIES_DB_ID;
+  if (process.env.NOTION_COMPANIES_DB_ID) return resolveDataSourceId(process.env.NOTION_COMPANIES_DB_ID);
   if (_companiesDb) return _companiesDb;
-  const res = await client().search({ query: 'Companies', filter: { property: 'object', value: 'database' } });
-  const hit = res.results.find(d => ((d.title || []).map(t => t.plain_text).join('')).toLowerCase() === 'companies');
-  if (!hit) throw new Error('Companies database not found — share it with the integration or set NOTION_COMPANIES_DB_ID');
+  const res = await notion('search', { method: 'POST', body: { query: 'Companies', filter: { property: 'object', value: 'data_source' }, page_size: 10 } });
+  const hit = res.results.find(d => String(d.name || plain(d.title || [])).toLowerCase() === 'companies') || res.results[0];
+  if (!hit) throw new Error('Companies data source not found — share it with the integration or set NOTION_COMPANIES_DB_ID');
   _companiesDb = hit.id;
   return _companiesDb;
 }

@@ -9,30 +9,60 @@
 // "Placeholder: …" get tag PLACEHOLDER. Conferencing links are extracted.
 
 import fs from 'node:fs';
+import { JWT } from 'google-auth-library';
 import { isoInTz, minutesInTz, mondayOfThisWeekISO, addDaysISO } from '../tz.js';
 
-const TOKEN_PATH = process.env.GOOGLE_TOKEN_PATH || '/root/.hermes/google_token.json';
+const tokenPath = () => process.env.GOOGLE_TOKEN_PATH || '/root/.hermes/google_token.json';
+const keyPath = () => process.env.GOOGLE_SERVICE_ACCOUNT_KEY || process.env.GOOGLE_APPLICATION_CREDENTIALS;
 
-export const configured = () => {
+const tokenExpiresAt = token => {
+  const value = token.expires_at || token.expiry_date;
+  return value ? new Date(value).getTime() : 0;
+};
+
+const readJson = path => JSON.parse(fs.readFileSync(path, 'utf8').replace(/^\uFEFF/, ''));
+
+const oauthConfigured = () => {
   try {
-    const raw = fs.readFileSync(TOKEN_PATH, 'utf8');
-    const token = JSON.parse(raw);
-    return !!(process.env.GOOGLE_CALENDAR_ID && (token.access_token || token.token));
+    const token = readJson(tokenPath());
+    const canRefresh = !!(
+      token.refresh_token &&
+      (token.client_id || process.env.GOOGLE_OAUTH_CLIENT_ID) &&
+      (token.client_secret || process.env.GOOGLE_OAUTH_CLIENT_SECRET)
+    );
+    return !!(token.access_token || token.token || canRefresh);
   } catch {
     return false;
   }
 };
 
+const serviceAccountConfigured = () => {
+  try {
+    const path = keyPath();
+    if (!path) return false;
+    const key = readJson(path);
+    return !!(key.client_email && key.private_key);
+  } catch {
+    return false;
+  }
+};
+
+export const configured = () => !!(
+  process.env.GOOGLE_CALENDAR_ID &&
+  (oauthConfigured() || serviceAccountConfigured())
+);
+
 async function accessToken() {
-  const raw = fs.readFileSync(TOKEN_PATH, 'utf8');
-  const token = JSON.parse(raw);
+  const path = tokenPath();
+  const token = readJson(path);
   let at = token.access_token || token.token;
-  const expiresAt = token.expires_at ? new Date(token.expires_at).getTime() : 0;
-  if (expiresAt && Date.now() > expiresAt && token.refresh_token) {
+  const expiresAt = tokenExpiresAt(token);
+  if ((!at || (expiresAt && Date.now() > expiresAt)) && token.refresh_token) {
     const refreshed = await refreshAccessToken(token);
     token.access_token = refreshed.access_token;
     token.expires_at = refreshed.expires_at;
-    fs.writeFileSync(TOKEN_PATH, JSON.stringify(token, null, 2));
+    token.expiry_date = refreshed.expires_at;
+    fs.writeFileSync(path, JSON.stringify(token, null, 2));
     return refreshed.access_token;
   }
   return at;
@@ -56,6 +86,32 @@ async function refreshAccessToken(token) {
     access_token: data.access_token,
     expires_at: Date.now() + (data.expires_in || 3600) * 1000
   };
+}
+
+let _serviceAuth = null;
+function serviceAuth() {
+  if (!_serviceAuth) {
+    const key = readJson(keyPath());
+    _serviceAuth = new JWT({
+      email: key.client_email,
+      key: key.private_key,
+      scopes: ['https://www.googleapis.com/auth/calendar.readonly']
+    });
+  }
+  return _serviceAuth;
+}
+
+async function calendarRequest(url) {
+  if (oauthConfigured()) {
+    const at = await accessToken();
+    const res = await fetch(url.toString(), {
+      headers: { Authorization: `Bearer ${at}` }
+    });
+    if (!res.ok) throw new Error(`Calendar request failed: ${res.status}`);
+    return res.json();
+  }
+  const res = await serviceAuth().request({ url: url.toString() });
+  return res.data;
 }
 
 const URL_RE = /https?:\/\/[^\s<>"']+/;
@@ -104,7 +160,6 @@ export async function getCalendar() {
   const timeMin = new Date(mondayISO + 'T00:00:00-12:00').toISOString();
   const timeMax = new Date(addDaysISO(mondayISO, 12) + 'T00:00:00+12:00').toISOString();
 
-  const at = await accessToken();
   const url = new URL('https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(process.env.GOOGLE_CALENDAR_ID) + '/events');
   url.searchParams.set('timeMin', timeMin);
   url.searchParams.set('timeMax', timeMax);
@@ -112,11 +167,7 @@ export async function getCalendar() {
   url.searchParams.set('orderBy', 'startTime');
   url.searchParams.set('maxResults', '250');
 
-  const res = await fetch(url.toString(), {
-    headers: { Authorization: `Bearer ${at}` }
-  });
-  if (!res.ok) throw new Error(`Calendar request failed: ${res.status}`);
-  const data = await res.json();
+  const data = await calendarRequest(url);
   const items = (data.items || [])
     .filter(ev => ev.status !== 'cancelled' && ev.start && ev.start.dateTime);
 

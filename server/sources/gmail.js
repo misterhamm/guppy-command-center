@@ -7,28 +7,40 @@
 
 import fs from 'node:fs';
 
-const TOKEN_PATH = process.env.GOOGLE_TOKEN_PATH || '/root/.hermes/google_token.json';
+const tokenPath = () => process.env.GOOGLE_TOKEN_PATH || '/root/.hermes/google_token.json';
+
+const tokenExpiresAt = token => {
+  const value = token.expires_at || token.expiry_date;
+  return value ? new Date(value).getTime() : 0;
+};
+
+const readToken = path => JSON.parse(fs.readFileSync(path, 'utf8').replace(/^\uFEFF/, ''));
 
 export const configured = () => {
   try {
-    const raw = fs.readFileSync(TOKEN_PATH, 'utf8');
-    const token = JSON.parse(raw);
-    return !!(token.access_token || token.token);
+    const token = readToken(tokenPath());
+    const canRefresh = !!(
+      token.refresh_token &&
+      (token.client_id || process.env.GOOGLE_OAUTH_CLIENT_ID) &&
+      (token.client_secret || process.env.GOOGLE_OAUTH_CLIENT_SECRET)
+    );
+    return !!(token.access_token || token.token || canRefresh);
   } catch {
     return false;
   }
 };
 
 async function accessToken() {
-  const raw = fs.readFileSync(TOKEN_PATH, 'utf8');
-  const token = JSON.parse(raw);
+  const path = tokenPath();
+  const token = readToken(path);
   let at = token.access_token || token.token;
-  const expiresAt = token.expires_at ? new Date(token.expires_at).getTime() : 0;
-  if (expiresAt && Date.now() > expiresAt && token.refresh_token) {
+  const expiresAt = tokenExpiresAt(token);
+  if ((!at || (expiresAt && Date.now() > expiresAt)) && token.refresh_token) {
     const refreshed = await refreshAccessToken(token);
     token.access_token = refreshed.access_token;
     token.expires_at = refreshed.expires_at;
-    fs.writeFileSync(TOKEN_PATH, JSON.stringify(token, null, 2));
+    token.expiry_date = refreshed.expires_at;
+    fs.writeFileSync(path, JSON.stringify(token, null, 2));
     return refreshed.access_token;
   }
   return at;

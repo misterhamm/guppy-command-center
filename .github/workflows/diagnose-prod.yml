@@ -20,6 +20,8 @@ jobs:
           script_stop: false
           script: |
             set -eu
+            echo "Waiting for deploy workflow to settle..."
+            sleep 45
 
             echo "== health =="
             curl -fsS http://127.0.0.1:8787/api/health || true

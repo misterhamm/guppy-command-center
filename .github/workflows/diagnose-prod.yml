@@ -1,6 +1,8 @@
 name: Diagnose Command Center
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 jobs:

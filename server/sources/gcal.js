@@ -58,12 +58,12 @@ export const configured = () => !!(
   (oauthConfigured() || serviceAccountConfigured())
 );
 
-async function accessToken() {
+async function accessToken({ forceRefresh = false } = {}) {
   const path = tokenPath();
   const token = readJson(path);
   let at = token.access_token || token.token;
   const expiresAt = tokenExpiresAt(token);
-  if ((!at || (expiresAt && Date.now() > expiresAt)) && token.refresh_token) {
+  if ((forceRefresh || !at || (expiresAt && Date.now() > expiresAt - AUTH_SKEW_MS)) && token.refresh_token) {
     const refreshed = await refreshAccessToken(token);
     token.access_token = refreshed.access_token;
     token.expires_at = refreshed.expires_at;
@@ -103,7 +103,9 @@ async function googleHttpError(prefix, res) {
     try { detail = await res.text(); } catch { /* ignore */ }
   }
   const suffix = detail ? `: ${String(detail).slice(0, 240)}` : '';
-  return new Error(`${prefix}: ${res.status}${suffix}`);
+  const err = new Error(`${prefix}: ${res.status}${suffix}`);
+  err.status = res.status;
+  return err;
 }
 
 let _serviceAuth = null;
@@ -122,10 +124,17 @@ function serviceAuth() {
 async function calendarRequest(url) {
   if (oauthConfigured()) {
     try {
-      const at = await accessToken();
-      const res = await fetch(url.toString(), {
+      let at = await accessToken();
+      let res = await fetch(url.toString(), {
         headers: { Authorization: `Bearer ${at}` }
       });
+      if (res.status === 401 && oauthState().canRefresh) {
+        console.error('[gcal] OAuth access token rejected; refreshing and retrying once');
+        at = await accessToken({ forceRefresh: true });
+        res = await fetch(url.toString(), {
+          headers: { Authorization: `Bearer ${at}` }
+        });
+      }
       if (!res.ok) throw await googleHttpError('Calendar OAuth request failed', res);
       return res.json();
     } catch (e) {

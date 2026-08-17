@@ -14,6 +14,7 @@ import { isoInTz, minutesInTz, mondayOfThisWeekISO, addDaysISO } from '../tz.js'
 
 const tokenPath = () => process.env.GOOGLE_TOKEN_PATH || '/root/.hermes/google_token.json';
 const keyPath = () => process.env.GOOGLE_SERVICE_ACCOUNT_KEY || process.env.GOOGLE_APPLICATION_CREDENTIALS;
+const AUTH_SKEW_MS = 60_000;
 
 const tokenExpiresAt = token => {
   const value = token.expires_at || token.expiry_date;
@@ -22,7 +23,7 @@ const tokenExpiresAt = token => {
 
 const readJson = path => JSON.parse(fs.readFileSync(path, 'utf8').replace(/^\uFEFF/, ''));
 
-const oauthConfigured = () => {
+const oauthState = () => {
   try {
     const token = readJson(tokenPath());
     const canRefresh = !!(
@@ -30,11 +31,16 @@ const oauthConfigured = () => {
       (token.client_id || process.env.GOOGLE_OAUTH_CLIENT_ID) &&
       (token.client_secret || process.env.GOOGLE_OAUTH_CLIENT_SECRET)
     );
-    return !!(token.access_token || token.token || canRefresh);
+    const at = token.access_token || token.token;
+    const expiresAt = tokenExpiresAt(token);
+    const accessTokenUsable = !!at && (!expiresAt || Date.now() < expiresAt - AUTH_SKEW_MS);
+    return { configured: !!(canRefresh || accessTokenUsable), canRefresh, accessTokenUsable };
   } catch {
-    return false;
+    return { configured: false, canRefresh: false, accessTokenUsable: false };
   }
 };
+
+const oauthConfigured = () => oauthState().configured;
 
 const serviceAccountConfigured = () => {
   try {
@@ -80,12 +86,24 @@ async function refreshAccessToken(token) {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: params
   });
-  if (!res.ok) throw new Error(`Token refresh failed: ${res.status}`);
+  if (!res.ok) throw await googleHttpError('Token refresh failed', res);
   const data = await res.json();
   return {
     access_token: data.access_token,
     expires_at: Date.now() + (data.expires_in || 3600) * 1000
   };
+}
+
+async function googleHttpError(prefix, res) {
+  let detail = '';
+  try {
+    const body = await res.json();
+    detail = body.error_description || body.error?.message || body.error || '';
+  } catch {
+    try { detail = await res.text(); } catch { /* ignore */ }
+  }
+  const suffix = detail ? `: ${String(detail).slice(0, 240)}` : '';
+  return new Error(`${prefix}: ${res.status}${suffix}`);
 }
 
 let _serviceAuth = null;
@@ -103,15 +121,23 @@ function serviceAuth() {
 
 async function calendarRequest(url) {
   if (oauthConfigured()) {
-    const at = await accessToken();
-    const res = await fetch(url.toString(), {
-      headers: { Authorization: `Bearer ${at}` }
-    });
-    if (!res.ok) throw new Error(`Calendar request failed: ${res.status}`);
-    return res.json();
+    try {
+      const at = await accessToken();
+      const res = await fetch(url.toString(), {
+        headers: { Authorization: `Bearer ${at}` }
+      });
+      if (!res.ok) throw await googleHttpError('Calendar OAuth request failed', res);
+      return res.json();
+    } catch (e) {
+      if (!serviceAccountConfigured()) throw e;
+      console.error('[gcal] OAuth failed; trying service account fallback:', e.message);
+    }
   }
-  const res = await serviceAuth().request({ url: url.toString() });
-  return res.data;
+  if (serviceAccountConfigured()) {
+    const res = await serviceAuth().request({ url: url.toString() });
+    return res.data;
+  }
+  throw new Error('Google Calendar credentials are not configured');
 }
 
 const URL_RE = /https?:\/\/[^\s<>"']+/;

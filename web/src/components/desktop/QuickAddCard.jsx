@@ -16,10 +16,10 @@ function Menu({ open, options, current, onPick, minWidth = 170, right }) {
 // Full Quick Add (Today) and the compact To-do variant.
 export default function QuickAddCard({ variant = 'today' }) {
   const store = useStore();
-  const { qa, qaSet, qaAdd, effectiveQa, clients, todayISO, tomorrowISO, nextMonISO, P } = store;
+  const { qa, qaSet, qaAdd, effectiveQa, clients, todayISO, tomorrowISO, nextMonISO, P, projectsEnabled } = store;
   const { menu, setMenu, qaOpen, setQaOpen, setTodoQaOpen } = useDesk();
   const eff = effectiveQa();
-  const isWork = qa.category === 'Work';
+  const isWork = projectsEnabled && qa.category === 'Work';
   const qaProjects = eff.client ? (clients[eff.client] || []) : [];
   const dueOpts = [
     { label: 'Today', iso: todayISO },
@@ -27,7 +27,7 @@ export default function QuickAddCard({ variant = 'today' }) {
     { label: 'Next Mon', iso: nextMonISO }
   ];
   const hint = qa.error
-    ? (eff.name.trim() ? 'Pick a client — required for Work tasks.' : 'Give it a name first.')
+    ? (eff.name.trim() ? 'Check the task details.' : 'Give it a name first.')
     : 'Status starts as Not Started · saves to Notion';
   const hintColor = qa.error ? P.red : 'var(--muted)';
   const submit = () => { if (qaAdd()) { setQaOpen(false); setTodoQaOpen(false); } };
@@ -53,7 +53,7 @@ export default function QuickAddCard({ variant = 'today' }) {
     return (
       <div style={{ background: 'var(--card)', border: '1.5px solid var(--green)', borderRadius: 10, padding: '10px 12px', marginBottom: 14 }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {toggle}
+          {projectsEnabled && toggle}
           <input
             placeholder="Add a task…"
             value={qa.name}
@@ -73,9 +73,9 @@ export default function QuickAddCard({ variant = 'today' }) {
   return (
     <div style={{ background: 'var(--card)', border: '1.5px solid ' + (qaOpen ? 'var(--green)' : 'var(--line)'), borderRadius: 10, padding: '10px 12px', marginBottom: 18, boxShadow: '0 1px 2px var(--line-soft)' }} onClick={e => e.stopPropagation()}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        {toggle}
+        {projectsEnabled && toggle}
         <input
-          placeholder="Add a task…  (try: borax sitemap fri asap)"
+          placeholder="Add a task…  (try: dentist fri asap)"
           value={qa.name}
           onChange={e => qaSet({ name: e.target.value, error: false })}
           onFocus={() => setQaOpen(true)}

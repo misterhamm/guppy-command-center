@@ -14,7 +14,7 @@ function sweptToday() {
 
 export default function TodayView() {
   const store = useStore();
-  const { tasks, projects, calendar, todayISO, nowMin, tomorrowISO, nextMonISO, P, setView, showToast, snoozeTask } = store;
+  const { tasks, projects, calendar, todayISO, nowMin, tomorrowISO, nextMonISO, P, setView, showToast, snoozeTask, projectsEnabled } = store;
   const { setEvId, setMenu, listIdsRef } = useDesk();
 
   const groups = todayGroups(tasks, todayISO);
@@ -97,7 +97,7 @@ export default function TodayView() {
 
       {attention === 0 && (
         <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 10, padding: 22, textAlign: 'center', fontSize: 13.5, color: 'var(--muted)', marginBottom: 18 }}>
-          Nothing urgent. Radar's below if you want a look around.
+          Nothing urgent. You've got a little breathing room.
         </div>
       )}
 
@@ -141,13 +141,17 @@ export default function TodayView() {
         <div onClick={() => setView('calendar')} tabIndex={0} style={{ flex: 'none', display: 'flex', alignItems: 'center', fontSize: 12, fontWeight: 700, color: 'var(--green)', cursor: 'pointer' }}>Week view →</div>
       </div>
 
-      {/* Project Radar */}
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 10 }}>
-        <div style={{ fontSize: 15, fontWeight: 800 }}>Project Radar</div>
-        <div style={{ fontSize: 12, color: 'var(--muted)' }}>{projects.length} non-complete · drag to reorder · click for detail</div>
-        <div onClick={() => setView('projects')} tabIndex={0} style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700, color: 'var(--green)', cursor: 'pointer' }}>Open Projects →</div>
-      </div>
-      <RadarGrid />
+      {projectsEnabled && (
+        <>
+          {/* Project Radar */}
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 10 }}>
+            <div style={{ fontSize: 15, fontWeight: 800 }}>Project Radar</div>
+            <div style={{ fontSize: 12, color: 'var(--muted)' }}>{projects.length} non-complete · drag to reorder · click for detail</div>
+            <div onClick={() => setView('projects')} tabIndex={0} style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700, color: 'var(--green)', cursor: 'pointer' }}>Open Projects →</div>
+          </div>
+          <RadarGrid />
+        </>
+      )}
     </div>
   );
 }

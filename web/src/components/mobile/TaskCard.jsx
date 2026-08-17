@@ -6,7 +6,7 @@ import { taskView } from '../../lib/enrich.js';
 // Mobile task card: swipe right = done, swipe left = pinned actions,
 // long-press = quick-actions sheet, tap = full editor.
 export default function TaskCard({ t }) {
-  const { P, todayISO, tomorrowISO, toggleTask, retryTask, snoozeTask } = useStore();
+  const { P, todayISO, tomorrowISO, toggleTask, retryTask, snoozeTask, projectsEnabled } = useStore();
   const { swipe, setSwipe, suppressTap, push, openTaskSheet } = useMob();
   const v = taskView(t, P, todayISO);
   const g = useRef({});
@@ -75,8 +75,8 @@ export default function TaskCard({ t }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 14, fontWeight: 600, color: v.nameColor, textDecoration: v.strike, lineHeight: 1.3 }}>{t.name}</div>
           <div style={{ display: 'flex', gap: 6, marginTop: 3, alignItems: 'center', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 11, fontWeight: 600, color: v.clientChipColor, background: v.clientChipBg, padding: '1px 7px', borderRadius: 99 }}>{v.clientChip}</span>
-            {!!t.project && <span style={{ fontSize: 11, fontWeight: 600, color: v.projChipColor, background: v.projChipBg, border: '1px solid transparent', padding: '1px 7px', borderRadius: 99 }}>{t.project}</span>}
+            {projectsEnabled && <span style={{ fontSize: 11, fontWeight: 600, color: v.clientChipColor, background: v.clientChipBg, padding: '1px 7px', borderRadius: 99 }}>{v.clientChip}</span>}
+            {projectsEnabled && !!t.project && <span style={{ fontSize: 11, fontWeight: 600, color: v.projChipColor, background: v.projChipBg, border: '1px solid transparent', padding: '1px 7px', borderRadius: 99 }}>{t.project}</span>}
             <span style={{ fontSize: 11.5, fontWeight: 700, color: v.dueColor, fontVariantNumeric: 'tabular-nums' }}>{v.dueDisplay}</span>
             {t.justDone && <span style={{ fontSize: 11.5, color: 'var(--green)', fontWeight: 600 }}>Nice — done ✓</span>}
             {t.syncFailed && <span onClick={e => { e.stopPropagation(); retryTask(t.id); }} style={{ fontSize: 10.5, fontWeight: 800, color: '#fff', background: 'var(--red)', padding: '1px 7px', borderRadius: 5 }}>Sync failed · Retry</span>}

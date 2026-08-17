@@ -5,7 +5,7 @@ import { taskCounts } from '../../lib/selectors.js';
 import { todayEvents, nowBar } from '../../lib/calendar.js';
 
 export default function Sidebar({ anyFailed }) {
-  const { view, setView, tasks, projects, calendar, todayISO, nowMin, P, outage, syncedAgo, refresh, theme, setTheme, showToast, textScale, cycleTextScale } = useStore();
+  const { view, setView, tasks, projects, calendar, todayISO, nowMin, P, outage, syncedAgo, refresh, theme, setTheme, showToast, textScale, cycleTextScale, projectsEnabled } = useStore();
   const { setMenu, setSelId, setEvId } = useDesk();
 
   const { open, attention } = taskCounts(tasks, todayISO);
@@ -13,7 +13,7 @@ export default function Sidebar({ anyFailed }) {
   const nav = [
     { label: 'Overview', view: 'today', count: attention },
     { label: 'To-do', view: 'todo', count: open.length },
-    { label: 'Projects', view: 'projects', count: projects.length },
+    ...(projectsEnabled ? [{ label: 'Projects', view: 'projects', count: projects.length }] : []),
     { label: 'Calendar', view: 'calendar', count: '' }
   ];
 

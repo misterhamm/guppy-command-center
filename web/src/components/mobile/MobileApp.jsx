@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useStore } from '../../state/store.jsx';
 import MobileToday from './MobileToday.jsx';
 import MobileTodo from './MobileTodo.jsx';
@@ -13,7 +13,7 @@ export const useMob = () => useContext(MobCtx);
 
 export default function MobileApp() {
   const store = useStore();
-  const { view, setView, tasks, projects, P, theme, setTheme, refresh, showToast, toast, dismissToast, outage, syncedAgo, todayISO, textScale, cycleTextScale } = store;
+  const { view, setView, tasks, projects, P, theme, setTheme, refresh, showToast, toast, dismissToast, outage, syncedAgo, todayISO, textScale, cycleTextScale, projectsEnabled } = store;
 
   const [stack, setStack] = useState([]);          // sheet stack
   const [dr, setDr] = useState(null);              // task editor working copy
@@ -36,6 +36,10 @@ export default function MobileApp() {
 
   const { open, odCount, tdCount, attention } = taskCounts(tasks, todayISO);
 
+  useEffect(() => {
+    if (!projectsEnabled && view === 'projects') setView('today');
+  }, [projectsEnabled, view, setView]);
+
   const titles = { today: 'Overview', todo: 'To-do', projects: 'Projects', calendar: 'Calendar' };
   const dateShort = dIso(todayISO).toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric' });
   const subs = {
@@ -48,7 +52,7 @@ export default function MobileApp() {
   const navDefs = [
     { label: 'Overview', view: 'today', count: String(attention) },
     { label: 'To-do', view: 'todo', count: String(open.length) },
-    { label: 'Projects', view: 'projects', count: String(projects.length) },
+    ...(projectsEnabled ? [{ label: 'Projects', view: 'projects', count: String(projects.length) }] : []),
     { label: 'Calendar', view: 'calendar', count: '' }
   ];
 
@@ -94,7 +98,7 @@ export default function MobileApp() {
 
         {view === 'today' && <MobileToday />}
         {view === 'todo' && <MobileTodo />}
-        {view === 'projects' && <MobileProjects />}
+        {projectsEnabled && view === 'projects' && <MobileProjects />}
         {view === 'calendar' && <MobileCalendar />}
 
         {/* FAB */}

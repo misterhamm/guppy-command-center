@@ -15,7 +15,7 @@ export const useDesk = () => useContext(DeskCtx);
 
 export default function DesktopApp() {
   const store = useStore();
-  const { view, setView, tasks, outage, syncedAgo, toast, dismissToast, showToast, refresh, qaSet } = store;
+  const { view, setView, tasks, outage, syncedAgo, toast, dismissToast, showToast, refresh, qaSet, projectsEnabled } = store;
 
   const [menu, setMenu] = useState(null);            // open dropdown key
   const [selId, setSelId] = useState(null);          // keyboard-selected task
@@ -35,6 +35,10 @@ export default function DesktopApp() {
   }, [tasks]);
 
   const closeDrawer = useCallback(() => setDrawerTask(null), []);
+
+  useEffect(() => {
+    if (!projectsEnabled && view === 'projects') setView('today');
+  }, [projectsEnabled, view, setView]);
 
   // Global keyboard: / add · ↑↓ select · ⏎ open · D done · S snooze · Esc close
   useEffect(() => {
@@ -83,7 +87,7 @@ export default function DesktopApp() {
   const anyFailed = tasks.some(t => t.syncFailed);
   const outageTitle = outage === 'notion' ? "Can't reach Notion" : "Can't reach Google Calendar";
   const outageSub = outage === 'notion'
-    ? `Showing tasks & projects from ${syncedAgo ?? '?'} min ago — edits will queue and retry.`
+    ? `Showing tasks from ${syncedAgo ?? '?'} min ago — edits will queue and retry.`
     : 'Events may be out of date — retrying every few minutes.';
 
   return (
@@ -110,11 +114,11 @@ export default function DesktopApp() {
 
           {view === 'today' && <TodayView />}
           {view === 'todo' && <TodoView />}
-          {view === 'projects' && <ProjectsView />}
+          {projectsEnabled && view === 'projects' && <ProjectsView />}
           {view === 'calendar' && <CalendarView />}
 
           {drawerTask && <EditDrawer />}
-          {expId && <ProjectPopover />}
+          {projectsEnabled && expId && <ProjectPopover />}
           {evId && <EventPopover />}
           <GuppyPanel />
 

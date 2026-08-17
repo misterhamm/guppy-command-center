@@ -6,7 +6,7 @@ import { fmtShort } from '../../lib/dates.js';
 
 // Dense desktop task row used by Today and To-do. `compact` = To-do sizing.
 export default function TaskRow({ t, compact }) {
-  const { P, todayISO, tomorrowISO, nextMonISO, nextWeekISO, toggleTask, retryTask, snoozeTask } = useStore();
+  const { P, todayISO, tomorrowISO, nextMonISO, nextWeekISO, toggleTask, retryTask, snoozeTask, projectsEnabled } = useStore();
   const { menu, setMenu, selId, openDrawer } = useDesk();
   const v = taskView(t, P, todayISO);
   const menuKey = 'snooze:' + t.id;
@@ -37,8 +37,8 @@ export default function TaskRow({ t, compact }) {
       {t.syncFailed && (
         <span onClick={e => { e.stopPropagation(); retryTask(t.id); }} tabIndex={0} style={{ fontSize: 11, fontWeight: 800, color: '#fff', background: 'var(--red)', padding: '2px 8px', borderRadius: 5, cursor: 'pointer' }}>Sync failed · Retry</span>
       )}
-      <span style={{ fontSize: compact ? 11 : 11.5, fontWeight: 600, color: v.clientChipColor, background: v.clientChipBg, padding: '2px 8px', borderRadius: 99 }}>{v.clientChip}</span>
-      {!!t.project && (
+      {projectsEnabled && <span style={{ fontSize: compact ? 11 : 11.5, fontWeight: 600, color: v.clientChipColor, background: v.clientChipBg, padding: '2px 8px', borderRadius: 99 }}>{v.clientChip}</span>}
+      {projectsEnabled && !!t.project && (
         <span style={{ fontSize: compact ? 11 : 11.5, fontWeight: 600, color: v.projChipColor, background: v.projChipBg, border: '1px solid transparent', padding: '2px 8px', borderRadius: 99 }}>{t.project}</span>
       )}
       <span style={{ fontSize: 12, fontWeight: 700, color: v.dueColor, width: 84, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{v.dueDisplay}</span>

@@ -19,7 +19,7 @@ function Kicker({ children, mt = 0 }) {
 
 export default function Sheets() {
   const store = useStore();
-  const { P, tasks, projects, calendar, clients, todayISO, nowMin, tomorrowISO, nextMonISO, nextWeekISO, toggleTask, snoozeTask, saveTask, deleteTask, saveProject, uploadLogo, logos, logoFor, showToast, qa, qaSet, qaAdd, qaPrefill, effectiveQa, guppyMsgs, guppySend, guppyBusy } = store;
+  const { P, tasks, projects, calendar, clients, todayISO, nowMin, tomorrowISO, nextMonISO, nextWeekISO, toggleTask, snoozeTask, saveTask, deleteTask, saveProject, uploadLogo, logos, logoFor, showToast, qa, qaSet, qaAdd, qaPrefill, effectiveQa, guppyMsgs, guppySend, guppyBusy, projectsEnabled } = store;
   const { stack, push, pop, closeAll, dr, setDr, drSync, setDrSync, openTaskSheet } = useMob();
 
   const [guppyInput, setGuppyInput] = useState('');
@@ -37,6 +37,7 @@ export default function Sheets() {
   }, [guppyMsgs, top]);
 
   if (!top) return null;
+  if (!projectsEnabled && top.type === 'project') return null;
 
   const label = item => {
     if (!item) return '';
@@ -108,11 +109,15 @@ export default function Sheets() {
           {dueChoices.map(o => <Pill key={o.label} label={o.label} active={(dr.dueISO || '') === o.iso} P={P} onClick={() => set({ dueISO: o.iso })} />)}
           <input type="date" value={dr.dueISO && !dueChoices.some(o => o.iso === dr.dueISO) ? dr.dueISO : ''} onChange={e => { const v = e.target.value; if (v) set({ dueISO: v }); }} style={{ fontSize: 12, color: 'var(--soft)', background: 'var(--card)', border: '1px solid var(--line2)', borderRadius: 99, padding: '7px 12px', width: 140 }} />
         </div>
-        <Kicker>CATEGORY</Kicker>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
-          {['Work', 'Personal'].map(c => <Pill key={c} label={c} active={c === cat} P={P} onClick={() => set({ personal: c === 'Personal' })} />)}
-        </div>
-        {!dr.personal && (
+        {projectsEnabled && (
+          <>
+            <Kicker>CATEGORY</Kicker>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
+              {['Work', 'Personal'].map(c => <Pill key={c} label={c} active={c === cat} P={P} onClick={() => set({ personal: c === 'Personal' })} />)}
+            </div>
+          </>
+        )}
+        {projectsEnabled && !dr.personal && (
           <>
             <Kicker>CLIENT <span style={{ color: 'var(--red)' }}>*</span></Kicker>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
@@ -268,9 +273,9 @@ export default function Sheets() {
           <span style={{ fontSize: 12.5, color: 'var(--muted)', fontWeight: 600 }}>{ev.dayLabel} · <span style={{ fontVariantNumeric: 'tabular-nums' }}>{timeRange(ev.startMin, ev.endMin)}</span></span>
           {v.hasTag && <span style={{ fontSize: 10, fontWeight: 800, color: v.tagColor, background: v.tagBg, padding: '2px 7px', borderRadius: 4, letterSpacing: '.03em' }}>{v.tag}</span>}
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 14, padding: '11px 12px', background: 'var(--card-alt)', borderRadius: 10 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: projectsEnabled ? '1fr 1fr' : '1fr', gap: 8, marginTop: 14, padding: '11px 12px', background: 'var(--card-alt)', borderRadius: 10 }}>
           <div><div style={{ fontSize: 10, fontWeight: 800, color: 'var(--muted)', letterSpacing: '.04em' }}>WHERE</div><div style={{ fontSize: 12.5, fontWeight: 700, marginTop: 1 }}>{ev.location || 'None — blocked time'}</div></div>
-          <div><div style={{ fontSize: 10, fontWeight: 800, color: 'var(--muted)', letterSpacing: '.04em' }}>CLIENT · PROJECT</div><div style={{ fontSize: 12.5, fontWeight: 700, marginTop: 1 }}>{ev.project ? ev.client + ' · ' + ev.project : (ev.client || 'Internal')}</div></div>
+          {projectsEnabled && <div><div style={{ fontSize: 10, fontWeight: 800, color: 'var(--muted)', letterSpacing: '.04em' }}>CLIENT · PROJECT</div><div style={{ fontSize: 12.5, fontWeight: 700, marginTop: 1 }}>{ev.project ? ev.client + ' · ' + ev.project : (ev.client || 'Internal')}</div></div>}
         </div>
         {!!ev.join && kind !== 'past' && (
           <a href={v.joinUrl} target="_blank" rel="noreferrer" style={{ display: 'block', marginTop: 12, background: 'var(--green)', color: '#fff', textAlign: 'center', fontWeight: 800, fontSize: 14, padding: '12px 0', borderRadius: 10 }}>Join {ev.join} ↗</a>
@@ -283,8 +288,8 @@ export default function Sheets() {
         </div>
         <div style={{ fontWeight: 800, color: 'var(--muted)', fontSize: 10.5, letterSpacing: '.04em', marginTop: 14 }}>AGENDA</div>
         <div style={{ fontSize: 13.5, color: 'var(--ink)', lineHeight: 1.5, marginTop: 4 }}>{ev.agenda}</div>
-        <div onClick={() => { qaPrefill({ client: ev.client || '', project: ev.project || '' }); closeAll(); push({ type: 'qa' }); }} tabIndex={0} style={{ marginTop: 14, border: '1.5px dashed var(--green)', borderRadius: 10, padding: '11px 0', textAlign: 'center', fontSize: 13, fontWeight: 700, color: 'var(--green)', cursor: 'pointer', opacity: 0.9 }}>+ Add task from this meeting</div>
-        {!!ev.project && (
+        <div onClick={() => { qaPrefill(projectsEnabled ? { client: ev.client || '', project: ev.project || '' } : {}); closeAll(); push({ type: 'qa' }); }} tabIndex={0} style={{ marginTop: 14, border: '1.5px dashed var(--green)', borderRadius: 10, padding: '11px 0', textAlign: 'center', fontSize: 13, fontWeight: 700, color: 'var(--green)', cursor: 'pointer', opacity: 0.9 }}>+ Add task from this meeting</div>
+        {projectsEnabled && !!ev.project && (
           <div onClick={() => { const p = projects.find(x => x.name === ev.project); if (p) push({ type: 'project', id: p.id }); }} tabIndex={0} style={{ marginTop: 8, border: '1px solid var(--line2)', borderRadius: 10, padding: '11px 12px', textAlign: 'center', fontSize: 13, fontWeight: 700, color: 'var(--green)', cursor: 'pointer' }}>Open project: {ev.project} →</div>
         )}
         <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--line-soft)', fontSize: 11.5, color: 'var(--muted)' }}>Read-only — synced from Google Calendar.</div>
@@ -294,19 +299,21 @@ export default function Sheets() {
 
   if (top.type === 'qa') {
     const eff = effectiveQa();
-    const isWork = qa.category === 'Work';
+    const isWork = projectsEnabled && qa.category === 'Work';
     const qaProjects = eff.client ? (clients[eff.client] || []) : [];
     const dueOpts = [
       { label: 'Today', iso: todayISO }, { label: 'Tomorrow', iso: tomorrowISO }, { label: 'Next Mon', iso: nextMonISO }
     ];
-    const hint = qa.error ? (eff.name.trim() ? 'Pick a client — required for Work tasks.' : 'Give it a name first.') : 'Status starts as Not Started · saves to Notion';
+    const hint = qa.error ? (eff.name.trim() ? 'Check the task details.' : 'Give it a name first.') : 'Status starts as Not Started · saves to Notion';
     content = (
       <>
-        <div style={{ display: 'flex', background: 'var(--panel)', borderRadius: 9, padding: 2, marginBottom: 14 }}>
-          <div onClick={() => qaSet({ category: 'Work' })} tabIndex={0} style={{ flex: 1, textAlign: 'center', padding: '9px 0', borderRadius: 7, background: isWork ? 'var(--card)' : 'transparent', fontSize: 13, fontWeight: 700, color: isWork ? 'var(--ink)' : 'var(--faint)', cursor: 'pointer', boxShadow: isWork ? '0 1px 2px rgba(0,0,0,.08)' : 'none' }}>Work</div>
-          <div onClick={() => qaSet({ category: 'Personal' })} tabIndex={0} style={{ flex: 1, textAlign: 'center', padding: '9px 0', borderRadius: 7, background: !isWork ? P.lavBg : 'transparent', fontSize: 13, fontWeight: 700, color: !isWork ? P.lavText : 'var(--faint)', cursor: 'pointer', boxShadow: !isWork ? '0 1px 2px rgba(0,0,0,.08)' : 'none' }}>Personal</div>
-        </div>
-        <input placeholder="What needs doing?  (try: borax sitemap fri asap)" value={qa.name} onChange={e => qaSet({ name: e.target.value, error: false })} style={{ width: '100%', border: '1.5px solid ' + (qa.error && !eff.name.trim() ? 'var(--red)' : 'var(--line2)'), borderRadius: 10, padding: 12, fontSize: 14.5, fontWeight: 600, color: 'var(--ink)', marginBottom: 8, outline: 'none', background: 'var(--card-alt)' }} />
+        {projectsEnabled && (
+          <div style={{ display: 'flex', background: 'var(--panel)', borderRadius: 9, padding: 2, marginBottom: 14 }}>
+            <div onClick={() => qaSet({ category: 'Work' })} tabIndex={0} style={{ flex: 1, textAlign: 'center', padding: '9px 0', borderRadius: 7, background: isWork ? 'var(--card)' : 'transparent', fontSize: 13, fontWeight: 700, color: isWork ? 'var(--ink)' : 'var(--faint)', cursor: 'pointer', boxShadow: isWork ? '0 1px 2px rgba(0,0,0,.08)' : 'none' }}>Work</div>
+            <div onClick={() => qaSet({ category: 'Personal' })} tabIndex={0} style={{ flex: 1, textAlign: 'center', padding: '9px 0', borderRadius: 7, background: !isWork ? P.lavBg : 'transparent', fontSize: 13, fontWeight: 700, color: !isWork ? P.lavText : 'var(--faint)', cursor: 'pointer', boxShadow: !isWork ? '0 1px 2px rgba(0,0,0,.08)' : 'none' }}>Personal</div>
+          </div>
+        )}
+        <input placeholder="What needs doing?  (try: dentist fri asap)" value={qa.name} onChange={e => qaSet({ name: e.target.value, error: false })} style={{ width: '100%', border: '1.5px solid ' + (qa.error && !eff.name.trim() ? 'var(--red)' : 'var(--line2)'), borderRadius: 10, padding: 12, fontSize: 14.5, fontWeight: 600, color: 'var(--ink)', marginBottom: 8, outline: 'none', background: 'var(--card-alt)' }} />
         {eff.parsed.detected.length > 0 && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, flexWrap: 'wrap', fontSize: 11.5, color: 'var(--muted)' }}>Detected:
             {eff.parsed.detected.map((d, i) => <span key={i} style={{ fontSize: 11, fontWeight: 700, color: 'var(--green)', background: 'var(--green-soft)', padding: '2px 8px', borderRadius: 99 }}>{d}</span>)}
@@ -348,7 +355,7 @@ export default function Sheets() {
   }
 
   if (top.type === 'guppy') {
-    const msgs = guppyMsgs.length ? guppyMsgs : [{ mine: false, text: 'Morning! Ask me about any client, project, or what’s on your plate — or paste meeting notes and I’ll draft tasks for you to approve.' }];
+    const msgs = guppyMsgs.length ? guppyMsgs : [{ mine: false, text: 'Morning! Ask me what’s on your plate, what’s due soon, or paste notes and I’ll draft tasks for you to approve.' }];
     const send = text => {
       const msg = (text != null ? text : guppyInput).trim();
       if (!msg) return;
@@ -364,7 +371,7 @@ export default function Sheets() {
           {guppyBusy && <div style={{ alignSelf: 'flex-start', background: 'var(--card)', color: 'var(--muted)', fontSize: 13.5, padding: '10px 13px', borderRadius: '12px 12px 12px 3px', border: '1px solid var(--line)' }}>…</div>}
         </div>
         <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
-          {['What do I have on Borax?', 'Summarize my week', 'Turn meeting notes into tasks'].map(c => (
+          {['What needs attention?', 'Summarize my week', 'Turn notes into tasks'].map(c => (
             <span key={c} onClick={() => send(c)} tabIndex={0} style={{ fontSize: 12, fontWeight: 600, color: 'var(--soft)', border: '1px solid var(--line2)', borderRadius: 99, padding: '7px 12px', cursor: 'pointer' }}>{c}</span>
           ))}
         </div>

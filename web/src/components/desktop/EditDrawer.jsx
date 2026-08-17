@@ -31,7 +31,7 @@ function Select({ id, value, options, onPick, color, extra }) {
 }
 
 export default function EditDrawer() {
-  const { P, todayISO, tomorrowISO, nextMonISO, clients, saveTask, deleteTask } = useStore();
+  const { P, todayISO, tomorrowISO, nextMonISO, clients, saveTask, deleteTask, projectsEnabled } = useStore();
   const { drawerTask: d, setDrawerTask, closeDrawer, setMenu } = useDesk();
   const [sync, setSync] = useState('idle'); // idle | saving | saved | failed
   const [orig] = useState(d);
@@ -93,12 +93,14 @@ export default function EditDrawer() {
             )}
           />
         </Field>
-        <Field label="CATEGORY">
-          <Select id="drCategory" value={cat} options={['Work', 'Personal'].map(c => ({ label: c, active: c === cat }))} onPick={o => set({ personal: o.label === 'Personal' })} />
-        </Field>
+        {projectsEnabled && (
+          <Field label="CATEGORY">
+            <Select id="drCategory" value={cat} options={['Work', 'Personal'].map(c => ({ label: c, active: c === cat }))} onPick={o => set({ personal: o.label === 'Personal' })} />
+          </Field>
+        )}
       </div>
 
-      {!d.personal && (
+      {projectsEnabled && !d.personal && (
         <>
           <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', letterSpacing: '.04em', marginBottom: 4 }}>CLIENT <span style={{ color: 'var(--red)' }}>*</span></div>
           <div style={{ marginBottom: 12 }}>

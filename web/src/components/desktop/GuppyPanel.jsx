@@ -2,9 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useStore } from '../../state/store.jsx';
 import { useDesk } from './DesktopApp.jsx';
 
-const GREETING = { mine: false, text: 'Morning! Ask me about any client, project, or what’s on your plate — or paste meeting notes and I’ll draft tasks for you to approve.' };
+const GREETING = { mine: false, text: 'Morning! Ask me what’s on your plate, what’s due soon, or paste notes and I’ll draft tasks for you to approve.' };
 
-const CHIPS = ['What do I have on Borax?', 'Summarize my week', 'Turn meeting notes into tasks'];
+const CHIPS = ['What needs attention?', 'Summarize my week', 'Turn notes into tasks'];
 
 export default function GuppyPanel() {
   const { P, guppyMsgs, guppySend, guppyBusy } = useStore();
@@ -35,7 +35,7 @@ export default function GuppyPanel() {
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 13.5, fontWeight: 800 }}>Guppy</div>
-              <div style={{ fontSize: 11, color: 'var(--muted)' }}>Knows your tasks, projects & calendar</div>
+              <div style={{ fontSize: 11, color: 'var(--muted)' }}>Knows your tasks & calendar</div>
             </div>
             <span onClick={() => setGuppyOpen(false)} tabIndex={0} style={{ color: 'var(--muted)', fontSize: 14, cursor: 'pointer', padding: '2px 6px' }}>✕</span>
           </div>

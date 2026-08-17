@@ -27,7 +27,7 @@ export default function CalendarView() {
     <div style={{ padding: '22px 26px 90px', maxWidth: 760 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 14 }}>
         <div style={{ fontSize: 22, fontWeight: 800 }}>Calendar</div>
-        <div style={{ fontSize: 12, color: 'var(--muted)' }}>Work calendar · read-only · click an event for details</div>
+        <div style={{ fontSize: 12, color: 'var(--muted)' }}>Google calendar · read-only · click an event for details</div>
         <a href={GCAL_URL} target="_blank" rel="noreferrer" style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700 }}>Open Google Calendar ↗</a>
       </div>
 

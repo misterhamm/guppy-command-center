@@ -5,7 +5,7 @@ import { findEvent, currentAndNext, todayEvents } from '../../lib/calendar.js';
 import { eventKind, eventView } from '../../lib/enrich.js';
 
 export default function EventPopover() {
-  const { calendar, todayISO, nowMin, P, projects, qaPrefill, setView } = useStore();
+  const { calendar, todayISO, nowMin, P, projects, qaPrefill, setView, projectsEnabled } = useStore();
   const { evId, setEvId, setExpId, setQaOpen } = useDesk();
   const ev = findEvent(calendar, evId);
   if (!ev) return null;
@@ -27,15 +27,17 @@ export default function EventPopover() {
           {ev.dayLabel} · <span style={{ fontVariantNumeric: 'tabular-nums' }}>{v.time}</span>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 12, padding: '10px 12px', background: 'var(--card-alt)', borderRadius: 8 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: projectsEnabled ? '1fr 1fr' : '1fr', gap: 8, marginTop: 12, padding: '10px 12px', background: 'var(--card-alt)', borderRadius: 8 }}>
           <div>
             <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--muted)', letterSpacing: '.04em' }}>WHERE</div>
             <div style={{ fontSize: 12.5, fontWeight: 700, marginTop: 1 }}>{ev.location || 'None — blocked time'}</div>
           </div>
-          <div>
-            <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--muted)', letterSpacing: '.04em' }}>CLIENT · PROJECT</div>
-            <div style={{ fontSize: 12.5, fontWeight: 700, marginTop: 1 }}>{ev.project ? ev.client + ' · ' + ev.project : (ev.client || 'Internal')}</div>
-          </div>
+          {projectsEnabled && (
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--muted)', letterSpacing: '.04em' }}>CLIENT · PROJECT</div>
+              <div style={{ fontSize: 12.5, fontWeight: 700, marginTop: 1 }}>{ev.project ? ev.client + ' · ' + ev.project : (ev.client || 'Internal')}</div>
+            </div>
+          )}
         </div>
 
         {!!ev.join && !v.past && (
@@ -53,13 +55,13 @@ export default function EventPopover() {
         <div style={{ fontSize: 13, color: 'var(--ink)', lineHeight: 1.5, marginTop: 3 }}>{ev.agenda}</div>
 
         <div
-          onClick={() => { setEvId(null); qaPrefill({ client: ev.client || '', project: ev.project || '' }); setView('today'); setQaOpen(true); setTimeout(() => { const el = document.querySelector('[data-cc-qa]'); if (el) el.focus(); }, 60); }}
+          onClick={() => { setEvId(null); qaPrefill(projectsEnabled ? { client: ev.client || '', project: ev.project || '' } : {}); setView('today'); setQaOpen(true); setTimeout(() => { const el = document.querySelector('[data-cc-qa]'); if (el) el.focus(); }, 60); }}
           tabIndex={0}
           className="hover-green-soft"
           style={{ marginTop: 12, border: '1.5px dashed var(--green)', borderRadius: 8, padding: '8px 0', textAlign: 'center', fontSize: 12.5, fontWeight: 700, color: 'var(--green)', cursor: 'pointer', opacity: 0.9 }}
         >+ Add task from this meeting</div>
 
-        {!!ev.project && (
+        {projectsEnabled && !!ev.project && (
           <div
             onClick={() => { const p = projects.find(x => x.name === ev.project); if (p) { setEvId(null); setExpId(p.id); } }}
             tabIndex={0}

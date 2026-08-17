@@ -8,6 +8,9 @@ const StoreCtx = createContext(null);
 export const useStore = () => useContext(StoreCtx);
 
 const POLL_MS = 3 * 60 * 1000;
+// Temporary personal-mode switch. Project UI/data stays in the codebase, but is
+// hidden and not fetched while client/project work is not relevant.
+const PROJECTS_ENABLED = false;
 
 function initialTheme() {
   let theme = null;
@@ -24,7 +27,7 @@ function applyThemeDom(theme) {
   if (m) m.setAttribute('content', theme === 'dark' ? '#12100C' : '#F7F5F1');
 }
 
-const EMPTY_QA = { category: 'Work', name: '', client: '', project: '', dueISO: '', priority: 'Soon', notes: '', noteOpen: false, error: false };
+const EMPTY_QA = { category: PROJECTS_ENABLED ? 'Work' : 'Personal', name: '', client: '', project: '', dueISO: '', priority: 'Soon', notes: '', noteOpen: false, error: false };
 
 // Text size: uniform zoom keeps the design's proportions while scaling type.
 // Defaults to 110% (per Chris — progressive lenses).
@@ -107,7 +110,11 @@ export function StoreProvider({ children }) {
   // ---- data fetch ----
   const refresh = useCallback(async ({ silent } = {}) => {
     let notionOk = true, gcalOk = true;
-    const [tRes, pRes, cRes] = await Promise.allSettled([api.getTasks(), api.getProjects(), api.getCalendar()]);
+    const [tRes, pRes, cRes] = await Promise.allSettled([
+      api.getTasks(),
+      PROJECTS_ENABLED ? api.getProjects() : Promise.resolve({ projects: [] }),
+      api.getCalendar()
+    ]);
     if (tRes.status === 'fulfilled') {
       // keep local optimistic flags (justDone, syncFailed) across polls
       setTasks(prev => tRes.value.tasks.map(nt => {
@@ -115,17 +122,27 @@ export function StoreProvider({ children }) {
         return old ? { ...nt, justDone: old.justDone, syncFailed: old.syncFailed } : nt;
       }));
     } else notionOk = false;
-    if (pRes.status === 'fulfilled') {
-      const projs = pRes.value.projects.filter(p => p.status !== 'Complete');
-      setProjects(projs);
-      let saved = null;
-      try { saved = JSON.parse(localStorage.getItem('cc-radar-order') || 'null'); } catch (e) { /* ignore */ }
-      setRadarOrder(cur => reconcileRadarOrder(saved && saved.length ? saved : (cur.length ? cur : null), projs, localTodayISO()));
-    } else notionOk = false;
+    if (PROJECTS_ENABLED) {
+      if (pRes.status === 'fulfilled') {
+        const projs = pRes.value.projects.filter(p => p.status !== 'Complete');
+        setProjects(projs);
+        let saved = null;
+        try { saved = JSON.parse(localStorage.getItem('cc-radar-order') || 'null'); } catch (e) { /* ignore */ }
+        setRadarOrder(cur => reconcileRadarOrder(saved && saved.length ? saved : (cur.length ? cur : null), projs, localTodayISO()));
+      } else notionOk = false;
+    } else {
+      setProjects([]);
+      setRadarOrder([]);
+    }
     if (cRes.status === 'fulfilled') setCalendar(cRes.value.weeks);
     else gcalOk = false;
-    api.getLogos().then(r => setLogos(r.logos)).catch(() => { /* logos are cosmetic */ });
-    api.getAliases().then(r => setAliases(r.aliases)).catch(() => { /* shorthand only */ });
+    if (PROJECTS_ENABLED) {
+      api.getLogos().then(r => setLogos(r.logos)).catch(() => { /* logos are cosmetic */ });
+      api.getAliases().then(r => setAliases(r.aliases)).catch(() => { /* shorthand only */ });
+    } else {
+      setLogos({ clients: {}, projects: {} });
+      setAliases({});
+    }
     setOutage(!notionOk ? 'notion' : !gcalOk ? 'gcal' : null);
     if (notionOk && gcalOk) setSyncedAt(Date.now());
     setReady(true);
@@ -210,10 +227,14 @@ export function StoreProvider({ children }) {
   // Save from the edit drawer/sheet. Returns 'saved' | 'failed'.
   const saveTask = useCallback(async (d) => {
     const patch = {
-      name: d.name, priority: d.priority, dueISO: d.dueISO, personal: d.personal,
-      client: d.personal ? '' : d.client, project: d.personal ? '' : d.project,
+      name: d.name, priority: d.priority, dueISO: d.dueISO,
       status: d.status, notes: d.notes, done: d.status === 'Done'
     };
+    if (PROJECTS_ENABLED) {
+      patch.personal = d.personal;
+      patch.client = d.personal ? '' : d.client;
+      patch.project = d.personal ? '' : d.project;
+    }
     try {
       await api.patchTask(d.id, patch);
       patchLocal(d.id, { ...patch, syncFailed: false });
@@ -253,14 +274,14 @@ export function StoreProvider({ children }) {
   const logoFor = useCallback(p => logos.projects[p.id] || logos.clients[p.client] || '', [logos]);
 
   // ---- quick add ----
-  const clients = useMemo(() => clientsMap(projects, tasks), [projects, tasks]);
+  const clients = useMemo(() => PROJECTS_ENABLED ? clientsMap(projects, tasks) : {}, [projects, tasks]);
 
   const effectiveQa = useCallback(() => {
     const parsed = parseQuickAdd(qa.name, clients, todayISO, aliases);
     return {
       parsed,
-      client: qa.client || parsed.client,
-      project: qa.project || (qa.client ? '' : parsed.project),
+      client: PROJECTS_ENABLED ? (qa.client || parsed.client) : '',
+      project: PROJECTS_ENABLED ? (qa.project || (qa.client ? '' : parsed.project)) : '',
       dueISO: qa.dueISO || parsed.dueISO,
       priority: qa.priority !== 'Soon' ? qa.priority : (parsed.priority || 'Soon'),
       name: parsed.detected.length && parsed.cleanName ? parsed.cleanName : qa.name
@@ -270,24 +291,25 @@ export function StoreProvider({ children }) {
   const qaSet = useCallback(patch => setQa(s => ({ ...s, ...patch })), []);
   const qaReset = useCallback(() => setQa(EMPTY_QA), []);
   const qaPrefill = useCallback(({ client = '', project = '' }) => {
-    setQa({ ...EMPTY_QA, category: 'Work', client, project });
+    setQa(PROJECTS_ENABLED ? { ...EMPTY_QA, category: 'Work', client, project } : EMPTY_QA);
   }, []);
 
   // Returns true when the task was accepted (form can close).
   const qaAdd = useCallback(() => {
     const eff = effectiveQa();
-    if (!eff.name.trim() || (qa.category === 'Work' && !eff.client)) {
+    const workTask = PROJECTS_ENABLED && qa.category === 'Work';
+    if (!eff.name.trim() || (workTask && !eff.client)) {
       qaSet({ error: true });
       return false;
     }
     const prio = eff.priority.toUpperCase();
     const body = {
       name: eff.name.trim(),
-      client: qa.category === 'Work' ? eff.client : '',
-      project: qa.category === 'Work' ? eff.project : '',
+      client: workTask ? eff.client : '',
+      project: workTask ? eff.project : '',
       dueISO: eff.dueISO || '',
       priority: prio,
-      personal: qa.category === 'Personal',
+      personal: PROJECTS_ENABLED ? qa.category === 'Personal' : true,
       notes: qa.notes
     };
     const dm = dueMeta(body.dueISO, todayISO);
@@ -369,6 +391,7 @@ export function StoreProvider({ children }) {
 
   const value = {
     ready, theme, setTheme, P,
+    projectsEnabled: PROJECTS_ENABLED,
     textScale, cycleTextScale,
     view, setView,
     tasks, projects, orderedProjects, calendar, clients,
